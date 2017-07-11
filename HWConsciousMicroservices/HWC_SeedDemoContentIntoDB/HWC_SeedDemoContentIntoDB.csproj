@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp1.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Amazon.Lambda.Core" Version="1.0.0" />
+    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.1.0" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.4.14" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="1.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <DotNetCliToolReference Include="Amazon.Lambda.Tools" Version="1.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="HWC_Core">
+      <HintPath>..\..\..\HWCCore\HWConsciousCore\HWC_Core\obj\Debug\netstandard1.6\HWC_Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
