@@ -88,8 +88,6 @@ namespace HWC_FlushConcurrentLists
                                     {
                                         resetTouchInfo = true;
                                     }
-                                    //Context.Logger.LogLine(combinedTs.ToString());
-                                    //Context.Logger.LogLine(DateTime.UtcNow.ToString());
                                 }
                                 else
                                 {
