@@ -384,7 +384,7 @@ namespace HWC_SeedDemoContentIntoDB
                                                         UserID = 2,
                                                         EnteredIntoZoneAt = DateTime.UtcNow.AddSeconds(-12),
                                                         LastSeenInZoneAt = DateTime.UtcNow.AddSeconds(-2),
-                                                        ReceivedCouponIDs = new List<int>() { 2 }
+                                                        ReceivedCouponIDs = new List<long>() { 2 }
                                                     }
                                                 }
                                             }
@@ -402,7 +402,7 @@ namespace HWC_SeedDemoContentIntoDB
                                                         UserID = 1,
                                                         EnteredIntoZoneAt = DateTime.UtcNow,
                                                         LastSeenInZoneAt = DateTime.UtcNow,
-                                                        ReceivedCouponIDs = new List<int>() { }
+                                                        ReceivedCouponIDs = new List<long>() { }
                                                     }
                                                 }
                                             }

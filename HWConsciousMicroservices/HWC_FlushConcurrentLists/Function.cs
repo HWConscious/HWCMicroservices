@@ -67,15 +67,15 @@ namespace HWC_FlushConcurrentLists
 
                 // Read DisplayConcurrentList
                 List<DisplayConcurrentList> items = await transientData.ScanAsync<DisplayConcurrentList>(null).GetNextSetAsync();
-                if (items != null && items.Any())
+                if (items?.Any() ?? false)
                 {
                     displayConcurrentList = items.FirstOrDefault();
-                    if (displayConcurrentList != null && displayConcurrentList.DisplaySessions != null && displayConcurrentList.DisplaySessions.Any())
+                    if (displayConcurrentList?.DisplaySessions?.Any() ?? false)
                     {
                         // Traverse through all DisplaySessions in DisplayConcurrentList
                         foreach (DisplaySession displaySession in displayConcurrentList.DisplaySessions)
                         {
-                            if (displaySession != null && displaySession.DisplayTouched == true)
+                            if (displaySession?.DisplayTouched ?? false == true)
                             {
                                 bool resetTouchInfo = false;
 
@@ -84,10 +84,7 @@ namespace HWC_FlushConcurrentLists
                                     // Reset touch info if the combination of the time DisplayEndpoint is touched and
                                     // DisplaySession touch-timeout threshold is lesser than current time
                                     var combinedTs = ((DateTime)displaySession.DisplayTouchedAt).AddSeconds(Config.DisplaySessionTouchTimeoutThreshold).ToUniversalTime();
-                                    if (combinedTs < DateTime.UtcNow)
-                                    {
-                                        resetTouchInfo = true;
-                                    }
+                                    resetTouchInfo = combinedTs < DateTime.UtcNow ? true : false;
                                 }
                                 else
                                 {
@@ -134,18 +131,18 @@ namespace HWC_FlushConcurrentLists
 
                 // Read ZoneConcurrentList
                 List<ZoneConcurrentList> items = await transientData.ScanAsync<ZoneConcurrentList>(null).GetNextSetAsync();
-                if (items != null && items.Any())
+                if (items?.Any() ?? false)
                 {
                     zoneConcurrentList = items.FirstOrDefault();
-                    if (zoneConcurrentList != null && zoneConcurrentList.ZoneSessions != null && zoneConcurrentList.ZoneSessions.Any())
+                    if (zoneConcurrentList?.ZoneSessions?.Any() ?? false)
                     {
                         // Traverse through all ZoneSessions in ZoneConcurrentList
                         foreach (ZoneSession zoneSession in zoneConcurrentList.ZoneSessions)
                         {
-                            if (zoneSession != null && zoneSession.UserConcurrentList != null)
+                            if (zoneSession?.UserConcurrentList != null)
                             {
                                 UserConcurrentList userConcurrentList = zoneSession.UserConcurrentList;
-                                if (userConcurrentList.UserSessions != null && userConcurrentList.UserSessions.Any())
+                                if (userConcurrentList.UserSessions?.Any() ?? false)
                                 {
                                     List<UserSession> userSessionsToRemove = new List<UserSession>();
 
