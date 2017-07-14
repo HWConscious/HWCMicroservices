@@ -163,8 +163,8 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding Notifications
                         var notifications = new Notification[]
                         {
-                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 1, Name = "Notification 1", SortOrder = 1, Timeout = 10, Active = true, ContentMimeType = "image/png", ContentSubject = "Advertisement for Coke", ContentCaption = "Coke", ContentBody = "http://www.abc.com/images/img1.png" },
-                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 1, Name = "Notification 2", SortOrder = 2, Timeout = 10, Active = true, ContentMimeType = "image/png", ContentSubject = "Advertisement for Cereal", ContentCaption = "Cereal", ContentBody = "http://www.abc.com/images/img2.png" }
+                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 1, Name = "Notification 1", SortOrder = 1, Timeout = 10, Active = true, ContentMimeType = MimeType.ImagePng, ContentSubject = "Advertisement for Coke", ContentCaption = "Coke", ContentBody = "http://www.abc.com/images/img1.png" },
+                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 1, Name = "Notification 2", SortOrder = 2, Timeout = 10, Active = true, ContentMimeType = MimeType.ImagePng, ContentSubject = "Advertisement for Cereal", ContentCaption = "Cereal", ContentBody = "http://www.abc.com/images/img2.png" }
                         };
                         foreach (Notification notification in notifications)
                         {
