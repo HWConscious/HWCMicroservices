@@ -6,6 +6,7 @@ using Xunit;
 
 using Amazon.Lambda.Core;
 using Amazon.Lambda.TestUtilities;
+using Amazon.Lambda.APIGatewayEvents;
 
 using HWC_AddUserLocation;
 
@@ -26,13 +27,21 @@ namespace HWC_AddUserLocation.Tests
         public async void TestFunctionFlowAsync()
         {
             // Arrange
-            var input = "Hello World!";
+            string userId = "1";
+            string locationSerialzed = "{ \"Type\": \"IBeacon\", \"DeviceID\": \"0e8cedd0-ad98-11e6\" }";    // Associated with ZoneID:1
+            //string locationSerialzed = "{ \"Type\": \"IBeacon\", \"DeviceID\": \"4f6cegh4-34fg-90d7\" }";    // Associated with ZoneID:2
+
+            APIGatewayProxyRequest request = new APIGatewayProxyRequest()
+            {
+                PathParameters = new Dictionary<string, string>() { { "user-id", userId } },
+                Body = locationSerialzed
+            };
 
             // Act
-            var retValue = await _function.FunctionHandlerAsync(input, _context);   // Invoke the lambda function handler
+            var retValue = await _function.FunctionHandlerAsync(request, _context);   // Invoke the lambda function handler
 
             // Assert
-            Assert.Equal(input, retValue);
+            // Nothing to assert for now
         }
     }
 }
