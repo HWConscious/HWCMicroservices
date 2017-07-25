@@ -1,9 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+
+using HWC.Core;
+using HWC.DataModel;
+using HWC.CloudService;
 
 using Amazon.Lambda.Core;
+using Amazon.Lambda.APIGatewayEvents;
+
+using Newtonsoft.Json;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
@@ -12,16 +21,212 @@ namespace HWC_AddDisplayEndpointEvent
 {
     public class Function
     {
-        
+        private long? _displayEndpointID = null;
+        private DataClient _dataClient = null;
+
+        public ILambdaContext Context = null;
+
         /// <summary>
         /// Adds a DisplayEndpoint Event
         /// </summary>
-        /// <param name="input"></param>
+        /// <param name="request"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public async Task<string> FunctionHandlerAsync(string input, ILambdaContext context)
+        public async Task<APIGatewayProxyResponse> FunctionHandlerAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            return input;
+            if (context != null)
+            {
+                this.Context = context;
+
+                if (request != null)
+                {
+                    // Reset data members of the Function class;
+                    // It needs to be done because AWS Lambda uses the same old instance to invoke the FunctionHandler on concurrent calls
+                    ResetDataMembers();
+
+                    // Process the request
+                    return await ProcessRequestAsync(request);
+                }
+                else
+                {
+                    throw new Exception("Request is null");
+                }
+            }
+            else
+            {
+                throw new Exception("Lambda context is not initialized");
+            }
         }
+
+        /// <summary>
+        /// Processes the input request
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        private async Task<APIGatewayProxyResponse> ProcessRequestAsync(APIGatewayProxyRequest request)
+        {
+            APIGatewayProxyResponse response = new APIGatewayProxyResponse();
+
+            // Retrieve DisplayEndpointID from request path-parameters
+            string displayEndpointIdRequestPathName = "display-endpoint-id";
+            if (request?.PathParameters?.ContainsKey(displayEndpointIdRequestPathName) ?? false)
+            {
+                // Try to parse the provided UserID from string to long
+                try
+                {
+                    _displayEndpointID = Convert.ToInt64(request.PathParameters[displayEndpointIdRequestPathName]);
+                }
+                catch (Exception ex)
+                {
+                    Context.Logger.LogLine("DisplayEndpointID conversion ERROR: " + ex.Message);
+                }
+            }
+
+            // Validate the DisplayEndpointID
+            if (1 > (_displayEndpointID ?? 0))
+            {
+                // Respond error
+                Error error = new Error((int)HttpStatusCode.BadRequest)
+                {
+                    Description = "Invalid ID supplied",
+                    ReasonPharse = "Bad Request"
+                };
+                response.StatusCode = error.Code;
+                response.Body = JsonConvert.SerializeObject(error);
+                Context.Logger.LogLine(error.Description);
+            }
+            else
+            {
+                // Initialize DataClient
+                Config.DataClientConfig dataClientConfig = new Config.DataClientConfig(Config.DataClientConfig.RdsDbInfrastructure.Aws);
+                using (_dataClient = new DataClient(dataClientConfig))
+                {
+                    // Check if DisplayEndpoint exists in DB
+                    if (await IsDisplayEndpointExistsAsync())
+                    {
+                        Event e = null;
+                        string eventSerialized = request?.Body;
+                        // Try to parse the provided json serialzed event into Event object
+                        try
+                        {
+                            e = JsonConvert.DeserializeObject<Event>(eventSerialized);
+                        }
+                        catch (Exception ex)
+                        {
+                            Context.Logger.LogLine("Event deserialization ERROR: " + ex.Message);
+                        }
+
+                        // Validate the Event
+                        if (!(e == null || e.Type != EventType.DisplayEndpoint_Touch || e.SourceType != EventSourceType.Notification || e.SourceID < 1))
+                        {
+                            // Register the DisplayEndpoint's touch event
+                            await RegisterDisplayEndpointTouchEvent(e);
+
+                            // Respond OK
+                            response.StatusCode = (int)HttpStatusCode.OK;
+                            response.Headers = new Dictionary<string, string>() { { "Access-Control-Allow-Origin", "'*'" } };
+                            response.Body = JsonConvert.SerializeObject(new Empty());
+                        }
+                        else
+                        {
+                            // Respond error
+                            Error error = new Error((int)HttpStatusCode.NotAcceptable)
+                            {
+                                Description = "Invalid Event input",
+                                ReasonPharse = "Not Acceptable Event"
+                            };
+                            response.StatusCode = error.Code;
+                            response.Body = JsonConvert.SerializeObject(error);
+                            Context.Logger.LogLine(error.Description);
+                        }
+                    }
+                    else
+                    {
+                        // Respond error
+                        Error error = new Error((int)HttpStatusCode.NotFound)
+                        {
+                            Description = "DisplayEndpoint not found",
+                            ReasonPharse = "DisplayEndpoint Not Found"
+                        };
+                        response.StatusCode = error.Code;
+                        response.Body = JsonConvert.SerializeObject(error);
+                        Context.Logger.LogLine(error.Description);
+                    }
+                }
+            }
+
+            return response;
+        }
+
+        /// <summary>
+        /// Register the DisplayEndpoint's touch event into it's DisplaySession
+        /// </summary>
+        /// <param name="e"></param>
+        /// <returns></returns>
+        private async Task RegisterDisplayEndpointTouchEvent(Event e)
+        {
+            try
+            {
+                bool isDataModified = false;
+                DisplayConcurrentList displayConcurrentList = null;
+
+                if (e != null)
+                {
+                    // Get the DisplayConcurrentList
+                    List<DisplayConcurrentList> items = await _dataClient?.TransientData?.ScanAsync<DisplayConcurrentList>(null).GetNextSetAsync();
+                    displayConcurrentList = (items?.Any() ?? false) ? items.FirstOrDefault() : null;
+
+                    // Retrieve DisplaySession for the DisplayEndpoint
+                    DisplaySession displaySession = displayConcurrentList?.DisplaySessions?
+                        .SingleOrDefault(dS => dS.DisplayEndpointID == _displayEndpointID);
+
+                    // Assign touch info and reset show-notification info
+                    if(displaySession != null)
+                    {
+                        displaySession.DisplayTouchedNotificationID = e.SourceID;
+                        displaySession.DisplayTouchedAt = e.EventAtTimestamp;
+                        displaySession.CurrentShowNotificationExpireAt = e.EventAtTimestamp;
+                        displaySession.BufferedShowNotificationID = null;
+                        isDataModified = true;
+                    }
+                }
+
+                if (isDataModified)
+                {
+                    // Save the updated DisplaySessions
+                    await _dataClient.TransientData.SaveAsync<DisplayConcurrentList>(displayConcurrentList);
+                    Context.Logger.LogLine("DisplaySession updated");
+                }
+            }
+            catch (Exception ex)
+            {
+                Context.Logger.LogLine("DisplayConcurrentList ERROR: " + ex.Message);
+            }
+        }
+
+        #region Helper methods
+
+        private void ResetDataMembers()
+        {
+            _displayEndpointID = null;
+            _dataClient = null;
+        }
+
+        private async Task<bool> IsDisplayEndpointExistsAsync()
+        {
+            try
+            {
+                return await _dataClient?.ConfigurationData?.DisplayEndpoints?
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(dE => dE.DisplayEndpointID == _displayEndpointID) != null ? true : false;
+            }
+            catch (Exception ex)
+            {
+                Context.Logger.LogLine("DisplayEndpoint search ERROR: " + ex.Message);
+            }
+            return false;
+        }
+
+        #endregion
     }
 }

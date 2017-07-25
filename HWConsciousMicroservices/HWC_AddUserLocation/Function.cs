@@ -101,8 +101,8 @@ namespace HWC_AddUserLocation
             else
             {
                 // Initialize DataClient
-                InitializeDataClient();
-                using (_dataClient)
+                Config.DataClientConfig dataClientConfig = new Config.DataClientConfig(Config.DataClientConfig.RdsDbInfrastructure.Aws);
+                using (_dataClient = new DataClient(dataClientConfig))
                 {
                     // Check if User exists in DB
                     if (await IsUserExistsAsync())
@@ -217,8 +217,8 @@ namespace HWC_AddUserLocation
                 // Retrieve NotificationIDs (only the ones are touched) associated with the DisplayEndpoints in the Zone
                 var touchedNotificationIDs = _displayConcurrentList?.DisplaySessions?
                     .Where(dS => zoneDisplayEndpointIDs?.Contains(dS.DisplayEndpointID) ?? false)
-                    .Where(dS => dS.DisplayTouched == true)
-                    .Select(dS => dS.TouchedNotificationID);
+                    .Where(dS => dS.DisplayTouchedNotificationID != null)
+                    .Select(dS => dS.DisplayTouchedNotificationID);
 
                 // Retrieve Coupons associated with the touched Notifications
                 var coupons = _dataClient?.ConfigurationData?.Coupons?
@@ -325,11 +325,11 @@ namespace HWC_AddUserLocation
                                 _displayConcurrentList.DisplaySessions.Add(displaySession);
                             }
 
-                            // Update the DisplaySession with invocation (current time) & expiration (total of each Notification's timeout) timestamps for Notifications
-                            int secondsToAddForExpiration = displayEndpoint.Notifications.Sum(n => n.Timeout);
-                            displaySession.NotificationsInvokedAt = DateTime.UtcNow;
-                            displaySession.ExpireNotificationsAt = DateTime.UtcNow.AddSeconds(secondsToAddForExpiration);
-                            isDataModified = true;
+                            if (!displaySession.IsUserExists)
+                            {
+                                displaySession.IsUserExists = true;
+                                isDataModified = true;
+                            }
                         }
                     }
                 }
@@ -429,28 +429,14 @@ namespace HWC_AddUserLocation
             _displayConcurrentList = null;
             _zoneConcurrentList = null;
         }
-
-        private void InitializeDataClient()
-        {
-            if (_dataClient == null)
-            {
-                try
-                {
-                    Config.DataClientConfig dataClientConfig = new Config.DataClientConfig(Config.DataClientConfig.RdsDbInfrastructure.Aws);
-                    _dataClient = new DataClient(dataClientConfig);
-                }
-                catch (Exception ex)
-                {
-                    Context.Logger.LogLine("DataClient initialization ERROR: " + ex.Message);
-                }
-            }
-        }
-
+        
         private async Task<bool> IsUserExistsAsync()
         {
             try
             {
-                return await _dataClient?.ConfigurationData?.Users?.AsNoTracking().SingleOrDefaultAsync(u => u.UserID == _userID) != null ? true : false;
+                return await _dataClient?.ConfigurationData?.Users?
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(u => u.UserID == _userID) != null ? true : false;
             }
             catch (Exception ex)
             {

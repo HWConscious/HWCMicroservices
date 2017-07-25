@@ -20,6 +20,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="HWC_Core">
+      <HintPath>..\..\..\HWCCore\HWConsciousCore\HWC_Core\obj\Debug\netstandard1.6\HWC_Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
 

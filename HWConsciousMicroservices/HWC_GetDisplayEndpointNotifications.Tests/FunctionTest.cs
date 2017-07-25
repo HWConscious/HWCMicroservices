@@ -6,6 +6,7 @@ using Xunit;
 
 using Amazon.Lambda.Core;
 using Amazon.Lambda.TestUtilities;
+using Amazon.Lambda.APIGatewayEvents;
 
 using HWC_GetDisplayEndpointNotifications;
 
@@ -26,13 +27,19 @@ namespace HWC_GetDisplayEndpointNotifications.Tests
         public async void TestFunctionFlowAsync()
         {
             // Arrange
-            var input = "Hello World!";
+            long displayEndpointID = 1;
+
+            string displayEndpointIdRequestPathName = "display-endpoint-id";
+            APIGatewayProxyRequest request = new APIGatewayProxyRequest()
+            {
+                PathParameters = new Dictionary<string, string>() { { displayEndpointIdRequestPathName, displayEndpointID.ToString() } }
+            };
 
             // Act
-            var retValue = await _function.FunctionHandlerAsync(input, _context);   // Invoke the lambda function handler
+            var retValue = await _function.FunctionHandlerAsync(request, _context);   // Invoke the lambda function handler
 
             // Assert
-            Assert.Equal(input, retValue);
+            // Nothing to assert for now
         }
     }
 }
