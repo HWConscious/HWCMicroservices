@@ -107,6 +107,10 @@ namespace HWC_GetDisplayEndpointNotifications
                     {
                         // Retrieve Notification for the DisplayEndpoint (if any)
                         Notification notification = await GetNotificationAsync(displayEndpoint);
+                        if (notification != null)
+                        {
+                            notification.DisplayEndpoint = null;
+                        }
 
                         // Respond OK
                         response.StatusCode = (int)HttpStatusCode.OK;
@@ -170,7 +174,7 @@ namespace HWC_GetDisplayEndpointNotifications
                         }
                         else
                         {
-                            if (DateTime.UtcNow <= displaySession.CurrentShowNotificationExpireAt)
+                            if (DateTime.UtcNow <= displaySession.CurrentShowNotificationExpireAt.Value.ToUniversalTime())
                             {
                                 notificationToReturn = activeNotifications
                                     .SingleOrDefault(n => n.NotificationID == displaySession.BufferedShowNotificationID);
@@ -182,7 +186,7 @@ namespace HWC_GetDisplayEndpointNotifications
 
                                 notificationToReturn = GetARandomNotificationFromAList(activeNotifications, displaySession.BufferedShowNotificationID);
                                 displaySession.BufferedShowNotificationID = notificationToReturn?.NotificationID;
-                                displaySession.CurrentShowNotificationExpireAt = displaySession.CurrentShowNotificationExpireAt.GetValueOrDefault().AddSeconds(lastBufferedShowNotification?.Timeout ?? 0);
+                                displaySession.CurrentShowNotificationExpireAt = displaySession.CurrentShowNotificationExpireAt.Value.AddSeconds(lastBufferedShowNotification?.Timeout ?? 0).ToUniversalTime();
                                 isDataModified = true;
                             }
                         }

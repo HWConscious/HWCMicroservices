@@ -96,7 +96,7 @@ namespace HWC_FlushConcurrentLists
                                             {
                                                 // Remove UserSession from the Zone if the combination of the time the User is last seen in the Zone and
                                                 // UserSession zone-timeout threshold is lesser than current time
-                                                var combinedTs = ((DateTime)userSession.LastSeenInZoneAt).AddSeconds(Config.UserSessionZoneTimeoutThreshold).ToUniversalTime();
+                                                var combinedTs = userSession.LastSeenInZoneAt.Value.AddSeconds(Config.UserSessionZoneTimeoutThreshold).ToUniversalTime();
                                                 if (combinedTs < DateTime.UtcNow)
                                                 {
                                                     userSessionsToRemove.Add(userSession);
@@ -174,6 +174,10 @@ namespace HWC_FlushConcurrentLists
                                 {
                                     displaySession.IsUserExists = false;
                                     displaySession.BufferedShowNotificationID = null;
+                                    if (DateTime.UtcNow > displaySession.CurrentShowNotificationExpireAt.Value.ToUniversalTime())
+                                    {
+                                        displaySession.CurrentShowNotificationExpireAt = null;
+                                    }
                                     isDataModified = true;
                                 }
                             }
@@ -187,7 +191,7 @@ namespace HWC_FlushConcurrentLists
                                 {
                                     // Reset touch info if the combination of the time DisplayEndpoint is touched and
                                     // DisplaySession touch-timeout threshold is lesser than current time
-                                    var combinedTs = ((DateTime)displaySession.DisplayTouchedAt).AddSeconds(Config.DisplaySessionTouchTimeoutThreshold).ToUniversalTime();
+                                    var combinedTs = displaySession.DisplayTouchedAt.Value.AddSeconds(Config.DisplaySessionTouchTimeoutThreshold).ToUniversalTime();
                                     resetTouchInfo = combinedTs < DateTime.UtcNow ? true : false;
                                 }
                                 else

@@ -184,8 +184,8 @@ namespace HWC_AddDisplayEndpointEvent
                     if(displaySession != null)
                     {
                         displaySession.DisplayTouchedNotificationID = e.SourceID;
-                        displaySession.DisplayTouchedAt = e.EventAtTimestamp;
-                        displaySession.CurrentShowNotificationExpireAt = e.EventAtTimestamp;
+                        displaySession.DisplayTouchedAt = e.EventAtTimestamp.ToUniversalTime();
+                        displaySession.CurrentShowNotificationExpireAt = e.EventAtTimestamp.ToUniversalTime();
                         displaySession.BufferedShowNotificationID = null;
                         isDataModified = true;
                     }
