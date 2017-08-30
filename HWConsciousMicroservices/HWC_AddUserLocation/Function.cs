@@ -130,10 +130,14 @@ namespace HWC_AddUserLocation
                             List<Coupon> coupons = await GetCouponsAsync();
                             if (coupons != null)
                             {
+                                // Exclude undesired properties from the returning json object
+                                var jsonResolver = new IgnorableSerializerContractResolver();
+                                jsonResolver.Ignore(typeof(Coupon), new string[] { "ClientSpot", "Notification" });
+
                                 // Respond OK
                                 response.StatusCode = (int)HttpStatusCode.OK;
                                 response.Headers = new Dictionary<string, string>() { { "Access-Control-Allow-Origin", "'*'" } };
-                                response.Body = JsonConvert.SerializeObject(coupons);
+                                response.Body = JsonConvert.SerializeObject(coupons, jsonResolver.GetSerializerSettings());
                             }
                             else
                             {

@@ -107,15 +107,16 @@ namespace HWC_GetDisplayEndpointNotifications
                     {
                         // Retrieve Notification for the DisplayEndpoint (if any)
                         Notification notification = await GetNotificationAsync(displayEndpoint);
-                        if (notification != null)
-                        {
-                            notification.DisplayEndpoint = null;
-                        }
 
+                        // Exclude undesired properties from the returning json object
+                        var jsonResolver = new IgnorableSerializerContractResolver();
+                        jsonResolver.Ignore(typeof(Notification), new string[] { "ClientSpot", "DisplayEndpoint" });
+                        jsonResolver.Ignore(typeof(Coupon), new string[] { "ClientSpot", "Notification" });
+                        
                         // Respond OK
                         response.StatusCode = (int)HttpStatusCode.OK;
                         response.Headers = new Dictionary<string, string>() { {" Access-Control-Allow-Origin", "'*'" } };
-                        response.Body = JsonConvert.SerializeObject(notification);
+                        response.Body = JsonConvert.SerializeObject(notification, jsonResolver.GetSerializerSettings());
                     }
                     else
                     {
@@ -223,6 +224,7 @@ namespace HWC_GetDisplayEndpointNotifications
             {
                 return await _dataClient?.ConfigurationData?.DisplayEndpoints?
                     .Include(dE => dE.Notifications)
+                        .ThenInclude(n => n.Coupons)
                     .AsNoTracking()
                     .SingleOrDefaultAsync(dE => dE.DisplayEndpointID == _displayEndpointID);
             }
@@ -256,7 +258,7 @@ namespace HWC_GetDisplayEndpointNotifications
             }
             return null;
         }
-
+        
         #endregion
     }
 }
