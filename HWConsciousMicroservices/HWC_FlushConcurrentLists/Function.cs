@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 
+using HWC.Core;
 using HWC.DataModel;
 using HWC.CloudService;
 
 using Amazon.Lambda.Core;
+using Amazon.Lambda.APIGatewayEvents;
+
+using Newtonsoft.Json;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
@@ -26,8 +31,10 @@ namespace HWC_FlushConcurrentLists
         /// <param name="input"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public async Task<string> FunctionHandlerAsync(string input, ILambdaContext context)
+        public async Task<APIGatewayProxyResponse> FunctionHandlerAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
+            APIGatewayProxyResponse response = new APIGatewayProxyResponse();
+
             if (context != null)
             {
                 this.Context = context;
@@ -45,9 +52,22 @@ namespace HWC_FlushConcurrentLists
                         await FlushZoneConcurrentListAsync();
                         await FlushDisplayConcurrentListAsync();
                     }
+
+                    // Respond OK
+                    response.StatusCode = (int)HttpStatusCode.OK;
+                    response.Headers = new Dictionary<string, string>() { { "Access-Control-Allow-Origin", "'*'" } };
+                    response.Body = JsonConvert.SerializeObject(new Empty());
                 }
                 catch (Exception ex)
                 {
+                    // Respond error
+                    Error error = new Error((int)HttpStatusCode.Forbidden)
+                    {
+                        Description = "Forbidden",
+                        ReasonPharse = "Forbidden"
+                    };
+                    response.StatusCode = error.Code;
+                    response.Body = JsonConvert.SerializeObject(error);
                     Context.Logger.LogLine("TransientData ERROR: " + ex.Message);
                 }
             }
@@ -56,7 +76,7 @@ namespace HWC_FlushConcurrentLists
                 throw new Exception("Lambda context is not initialized");
             }
 
-            return input;
+            return response;
         }
 
         /// <summary>
