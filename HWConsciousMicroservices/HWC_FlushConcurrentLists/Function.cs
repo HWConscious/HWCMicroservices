@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 
+using HWC.Core;
 using HWC.DataModel;
 using HWC.CloudService;
 
 using Amazon.Lambda.Core;
+using Amazon.Lambda.APIGatewayEvents;
+
+using Newtonsoft.Json;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
@@ -17,32 +22,52 @@ namespace HWC_FlushConcurrentLists
     {
         public ILambdaContext Context = null;
 
+        private DataClient _dataClient = null;
+        private ZoneConcurrentList _zoneConcurrentList = null;
+
         /// <summary>
         /// Flushes Concurrent Lists (defined in HWC.DataModel). This Lambda function function is typically invoked with scheduled calls.
         /// </summary>
         /// <param name="input"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public async Task<string> FunctionHandlerAsync(string input, ILambdaContext context)
+        public async Task<APIGatewayProxyResponse> FunctionHandlerAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
+            APIGatewayProxyResponse response = new APIGatewayProxyResponse();
+
             if (context != null)
             {
                 this.Context = context;
 
                 try
                 {
+                    // Reset data members of the Function class;
+                    // It needs to be done because AWS Lambda uses the same old instance to invoke the FunctionHandler on concurrent calls
+                    ResetDataMembers();
+
+                    // Initialize DataClient
                     Config.DataClientConfig dataClientConfig = new Config.DataClientConfig(Config.DataClientConfig.RdsDbInfrastructure.Aws);
-                    using (DataClient dataClient = new DataClient(dataClientConfig))
+                    using (_dataClient = new DataClient(dataClientConfig))
                     {
-                        if (dataClient.TransientData != null)
-                        {
-                            await FlushDisplayConcurrentListAsync(dataClient.TransientData);
-                            await FlushZoneConcurrentListAsync(dataClient.TransientData);
-                        }
+                        await FlushZoneConcurrentListAsync();
+                        await FlushDisplayConcurrentListAsync();
                     }
+
+                    // Respond OK
+                    response.StatusCode = (int)HttpStatusCode.OK;
+                    response.Headers = new Dictionary<string, string>() { { "Access-Control-Allow-Origin", "'*'" } };
+                    response.Body = JsonConvert.SerializeObject(new Empty());
                 }
                 catch (Exception ex)
                 {
+                    // Respond error
+                    Error error = new Error((int)HttpStatusCode.Forbidden)
+                    {
+                        Description = "Forbidden",
+                        ReasonPharse = "Forbidden"
+                    };
+                    response.StatusCode = error.Code;
+                    response.Body = JsonConvert.SerializeObject(error);
                     Context.Logger.LogLine("TransientData ERROR: " + ex.Message);
                 }
             }
@@ -51,96 +76,32 @@ namespace HWC_FlushConcurrentLists
                 throw new Exception("Lambda context is not initialized");
             }
 
-            return input;
-        }
-
-        /// <summary>
-        /// Flushes DisplayConcurrentList
-        /// </summary>
-        /// <param name="dataClientConfig"></param>
-        private async Task FlushDisplayConcurrentListAsync(TransientData transientData)
-        {
-            try
-            {
-                bool isDataModified = false;
-                DisplayConcurrentList displayConcurrentList = null;
-
-                // Read DisplayConcurrentList
-                List<DisplayConcurrentList> items = await transientData.ScanAsync<DisplayConcurrentList>(null).GetNextSetAsync();
-                if (items?.Any() ?? false)
-                {
-                    displayConcurrentList = items.FirstOrDefault();
-                    if (displayConcurrentList?.DisplaySessions?.Any() ?? false)
-                    {
-                        // Traverse through all DisplaySessions in DisplayConcurrentList
-                        foreach (DisplaySession displaySession in displayConcurrentList.DisplaySessions)
-                        {
-                            if (displaySession?.DisplayTouched ?? false == true)
-                            {
-                                bool resetTouchInfo = false;
-
-                                if (displaySession.DisplayTouchedAt != null)
-                                {
-                                    // Reset touch info if the combination of the time DisplayEndpoint is touched and
-                                    // DisplaySession touch-timeout threshold is lesser than current time
-                                    var combinedTs = ((DateTime)displaySession.DisplayTouchedAt).AddSeconds(Config.DisplaySessionTouchTimeoutThreshold).ToUniversalTime();
-                                    resetTouchInfo = combinedTs < DateTime.UtcNow ? true : false;
-                                }
-                                else
-                                {
-                                    resetTouchInfo = true;
-                                }
-
-                                // Reseting DisplaySession's touch info
-                                if (resetTouchInfo)
-                                {
-                                    displaySession.DisplayTouched = false;
-                                    displaySession.DisplayTouchedAt = null;
-                                    displaySession.TouchedNotificationID = null;
-                                    isDataModified = true;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Update DisplayConcurrentList
-                if (isDataModified)
-                {
-                    displayConcurrentList.LastFlushedAt = DateTime.UtcNow;
-                    await transientData.SaveAsync<DisplayConcurrentList>(displayConcurrentList);
-                    Context.Logger.LogLine("DisplayConcurrentList updated");
-                }
-            }
-            catch (Exception ex)
-            {
-                Context.Logger.LogLine("DisplayConcurrentList ERROR: " + ex.Message);
-            }
+            return response;
         }
 
         /// <summary>
         /// Flushes ZoneConcurrentList
         /// </summary>
         /// <param name="dataClientConfig"></param>
-        private async Task FlushZoneConcurrentListAsync(TransientData transientData)
+        private async Task FlushZoneConcurrentListAsync()
         {
             try
             {
                 bool isDataModified = false;
-                ZoneConcurrentList zoneConcurrentList = null;
 
                 // Read ZoneConcurrentList
-                List<ZoneConcurrentList> items = await transientData.ScanAsync<ZoneConcurrentList>(null).GetNextSetAsync();
+                List<ZoneConcurrentList> items = await _dataClient?.TransientData?.ScanAsync<ZoneConcurrentList>(null).GetNextSetAsync();
                 if (items?.Any() ?? false)
                 {
-                    zoneConcurrentList = items.FirstOrDefault();
-                    if (zoneConcurrentList?.ZoneSessions?.Any() ?? false)
+                    _zoneConcurrentList = items.FirstOrDefault();
+                    if (_zoneConcurrentList?.ZoneSessions?.Any() ?? false)
                     {
                         // Traverse through all ZoneSessions in ZoneConcurrentList
-                        foreach (ZoneSession zoneSession in zoneConcurrentList.ZoneSessions)
+                        foreach (ZoneSession zoneSession in _zoneConcurrentList.ZoneSessions)
                         {
                             if (zoneSession?.UserConcurrentList != null)
                             {
+                                // Flush the UserConcurrentList's UserSessions
                                 UserConcurrentList userConcurrentList = zoneSession.UserConcurrentList;
                                 if (userConcurrentList.UserSessions?.Any() ?? false)
                                 {
@@ -155,7 +116,7 @@ namespace HWC_FlushConcurrentLists
                                             {
                                                 // Remove UserSession from the Zone if the combination of the time the User is last seen in the Zone and
                                                 // UserSession zone-timeout threshold is lesser than current time
-                                                var combinedTs = ((DateTime)userSession.LastSeenInZoneAt).AddSeconds(Config.UserSessionZoneTimeoutThreshold).ToUniversalTime();
+                                                var combinedTs = userSession.LastSeenInZoneAt.Value.AddSeconds(Config.UserSessionZoneTimeoutThreshold).ToUniversalTime();
                                                 if (combinedTs < DateTime.UtcNow)
                                                 {
                                                     userSessionsToRemove.Add(userSession);
@@ -187,7 +148,7 @@ namespace HWC_FlushConcurrentLists
                 // Update ZoneConcurrentList
                 if (isDataModified)
                 {
-                    await transientData.SaveAsync<ZoneConcurrentList>(zoneConcurrentList);
+                    await _dataClient.TransientData.SaveAsync<ZoneConcurrentList>(_zoneConcurrentList);
                     Context.Logger.LogLine("ZoneConcurrentList updated");
                 }
             }
@@ -196,5 +157,102 @@ namespace HWC_FlushConcurrentLists
                 Context.Logger.LogLine("ZoneConcurrentList ERROR: " + ex.Message);
             }
         }
+
+        /// <summary>
+        /// Flushes DisplayConcurrentList
+        /// </summary>
+        /// <param name="dataClientConfig"></param>
+        private async Task FlushDisplayConcurrentListAsync()
+        {
+            try
+            {
+                bool isDataModified = false;
+                DisplayConcurrentList displayConcurrentList = null;
+
+                // Read DisplayConcurrentList
+                List<DisplayConcurrentList> items = await _dataClient?.TransientData?.ScanAsync<DisplayConcurrentList>(null).GetNextSetAsync();
+                if (items?.Any() ?? false)
+                {
+                    displayConcurrentList = items.FirstOrDefault();
+                    if (displayConcurrentList?.DisplaySessions?.Any() ?? false)
+                    {
+                        // Get a list of all DisplayEndpoints
+                        var displayEndpoints = _dataClient?.ConfigurationData?.DisplayEndpoints.ToList();
+
+                        // Traverse through all DisplaySessions in DisplayConcurrentList
+                        foreach (DisplaySession displaySession in displayConcurrentList.DisplaySessions)
+                        {
+                            // Flush the DisplaySession's show-notification information
+                            if (displaySession?.IsUserExists == true)
+                            {
+                                // Get the ZoneID of the DisplaySession
+                                long? zoneID = displayEndpoints?
+                                    .SingleOrDefault(dE => dE.DisplayEndpointID == displaySession.DisplayEndpointID).ZoneID;
+
+                                // Reset show-notification info if there is no UserSession for the Zone's ZoneSession
+                                if (!(_zoneConcurrentList?.ZoneSessions?.SingleOrDefault(zS => zS.ZoneID == zoneID)?.UserConcurrentList?.UserSessions?.Any() ?? false))
+                                {
+                                    displaySession.IsUserExists = false;
+                                    displaySession.BufferedShowNotificationID = null;
+                                    if (DateTime.UtcNow > displaySession.CurrentShowNotificationExpireAt.Value.ToUniversalTime())
+                                    {
+                                        displaySession.CurrentShowNotificationExpireAt = null;
+                                    }
+                                    isDataModified = true;
+                                }
+                            }
+
+                            // Flush the DisplaySession's touch information
+                            if (displaySession?.DisplayTouchedNotificationID != null)
+                            {
+                                bool resetTouchInfo = false;
+
+                                if (displaySession.DisplayTouchedAt != null)
+                                {
+                                    // Reset touch info if the combination of the time DisplayEndpoint is touched and
+                                    // DisplaySession touch-timeout threshold is lesser than current time
+                                    var combinedTs = displaySession.DisplayTouchedAt.Value.AddSeconds(Config.DisplaySessionTouchTimeoutThreshold).ToUniversalTime();
+                                    resetTouchInfo = combinedTs < DateTime.UtcNow ? true : false;
+                                }
+                                else
+                                {
+                                    resetTouchInfo = true;
+                                }
+
+                                // Reseting DisplaySession's touch info
+                                if (resetTouchInfo)
+                                {
+                                    displaySession.DisplayTouchedNotificationID = null;
+                                    displaySession.DisplayTouchedAt = null;
+                                    isDataModified = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Update DisplayConcurrentList
+                if (isDataModified)
+                {
+                    displayConcurrentList.LastFlushedAt = DateTime.UtcNow;
+                    await _dataClient.TransientData.SaveAsync<DisplayConcurrentList>(displayConcurrentList);
+                    Context.Logger.LogLine("DisplayConcurrentList updated");
+                }
+            }
+            catch (Exception ex)
+            {
+                Context.Logger.LogLine("DisplayConcurrentList ERROR: " + ex.Message);
+            }
+        }
+
+        #region Helper methods
+
+        private void ResetDataMembers()
+        {
+            _dataClient = null;
+            _zoneConcurrentList = null;
+        }
+
+        #endregion
     }
 }

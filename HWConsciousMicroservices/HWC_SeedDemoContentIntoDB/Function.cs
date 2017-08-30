@@ -340,20 +340,20 @@ namespace HWC_SeedDemoContentIntoDB
                                         new DisplaySession()
                                         {
                                             DisplayEndpointID = 1,
-                                            NotificationsInvokedAt = DateTime.UtcNow,
-                                            ExpireNotificationsAt = DateTime.UtcNow.AddSeconds(20),
-                                            DisplayTouched = true,
-                                            DisplayTouchedAt = DateTime.UtcNow.AddSeconds(5),
-                                            TouchedNotificationID = 2
+                                            IsUserExists = true,
+                                            BufferedShowNotificationID = 1,
+                                            CurrentShowNotificationExpireAt = DateTime.UtcNow.AddSeconds(10),
+                                            DisplayTouchedNotificationID = 2,
+                                            DisplayTouchedAt = DateTime.UtcNow.AddSeconds(5)
                                         },
                                         new DisplaySession()
                                         {
                                             DisplayEndpointID = 2,
-                                            NotificationsInvokedAt = DateTime.UtcNow,
-                                            ExpireNotificationsAt = DateTime.UtcNow.AddSeconds(20),
-                                            DisplayTouched = false,
-                                            DisplayTouchedAt = null,
-                                            TouchedNotificationID = null
+                                            IsUserExists = false,
+                                            BufferedShowNotificationID = null,
+                                            CurrentShowNotificationExpireAt = null,
+                                            DisplayTouchedNotificationID = null,
+                                            DisplayTouchedAt = null
                                         }
                                     },
                                     LastFlushedAt = DateTime.UtcNow.AddSeconds(-3)
