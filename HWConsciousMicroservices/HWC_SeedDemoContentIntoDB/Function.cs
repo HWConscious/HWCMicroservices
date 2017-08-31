@@ -32,7 +32,7 @@ namespace HWC_SeedDemoContentIntoDB
             if (context != null)
             {
                 this.Context = context;
-                
+
                 Config.DataClientConfig dataClientConfig = new Config.DataClientConfig(Config.DataClientConfig.RdsDbInfrastructure.Aws);
 
                 await ConfigurationDataDemoAsync(dataClientConfig);
@@ -100,7 +100,7 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding Clients
                         var clients = new Client[]
                         {
-                            new Client{ Name = "Mymart", PhoneNumber = "001-123-4567", Address = "US" }
+                            new Client{ Name = "Demo Mart", PhoneNumber = "001-123-4567", Address = "US" }
                         };
                         foreach (Client client in clients)
                         {
@@ -111,8 +111,8 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding ClientSpots
                         var clientSpots = new ClientSpot[]
                         {
-                            new ClientSpot{ ClientID = 1, Name = "Mymart Store 1", PhoneNumber = "001-123-4567", Address = "Seattle, US" },
-                            new ClientSpot{ ClientID = 1, Name = "Mymart Store 2", PhoneNumber = "001-123-4567", Address = "LA, US" }
+                            new ClientSpot{ ClientID = 1, Name = "DemoMart Seattle Store", PhoneNumber = "001-123-4567", Address = "Seattle, US" },
+                            new ClientSpot{ ClientID = 1, Name = "DemoMart LA Store", PhoneNumber = "001-123-4567", Address = "LA, US" }
                         };
                         foreach (ClientSpot clientSpot in clientSpots)
                         {
@@ -123,8 +123,8 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding Zones
                         var zones = new Zone[]
                         {
-                            new Zone{ ClientSpotID = 1, Name = "Zone 1" },
-                            new Zone{ ClientSpotID = 1, Name = "Zone 2" }
+                            new Zone{ ClientSpotID = 1, Name = "Pseudo Zone" },
+                            new Zone{ ClientSpotID = 1, Name = "Demo Bakery Zone" }
                         };
                         foreach (Zone zone in zones)
                         {
@@ -138,9 +138,9 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding LocationDevices
                         var locationDevices = new LocationDevice[]
                         {
-                            new LocationDevice{ ClientSpotID = 1, ZoneID = 1, Type = LocationDeviceType.IBeacon, DeviceID = "0e8cedd0-ad98-11e6" },
-                            new LocationDevice{ ClientSpotID = 1, ZoneID = 1, Type = LocationDeviceType.IBeacon, DeviceID = "ab8456d0-34gh-76d9" },
-                            new LocationDevice{ ClientSpotID = 1, ZoneID = 2, Type = LocationDeviceType.IBeacon, DeviceID = "4f6cegh4-34fg-90d7" }
+                            new LocationDevice{ ClientSpotID = 1, ZoneID = 1, Type = LocationDeviceType.IBeacon, DeviceID = "pseudo-uuid" },
+                            new LocationDevice{ ClientSpotID = 1, ZoneID = 2, Type = LocationDeviceType.IBeacon, DeviceID = "5bf0e89a-5760-4a9d-bb8a-7a895c9c99b2" },
+                            new LocationDevice{ ClientSpotID = 1, ZoneID = 2, Type = LocationDeviceType.IBeacon, DeviceID = "12345678-1234-1234-1234-123456789012" }
                         };
                         foreach (LocationDevice locationDevice in locationDevices)
                         {
@@ -151,8 +151,8 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding DisplayEndpoints
                         var displayEndpoints = new DisplayEndpoint[]
                         {
-                            new DisplayEndpoint{ ClientSpotID = 1, ZoneID = 1, Name = "Display 1" },
-                            new DisplayEndpoint{ ClientSpotID = 1, ZoneID = 2, Name = "Display 2" }
+                            new DisplayEndpoint{ ClientSpotID = 1, ZoneID = 1, Name = "Pseudo Display" },
+                            new DisplayEndpoint{ ClientSpotID = 1, ZoneID = 2, Name = "Demo Display 1" }
                         };
                         foreach (DisplayEndpoint displayEndpoint in displayEndpoints)
                         {
@@ -163,14 +163,15 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding Notifications
                         var notifications = new Notification[]
                         {
-                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 1, Name = "Notification 1", SortOrder = 1, Timeout = 10, Active = true, ContentMimeType = MimeType.ImagePng, ContentSubject = "Advertisement for Coke", ContentCaption = "Coke", ContentBody = "http://www.abc.com/images/img1.png" },
-                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 1, Name = "Notification 2", SortOrder = 2, Timeout = 10, Active = true, ContentMimeType = MimeType.ImagePng, ContentSubject = "Advertisement for Cereal", ContentCaption = "Cereal", ContentBody = "http://www.abc.com/images/img2.png" }
+                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 1, Name = "Pseduo Notification", SortOrder = 1, Timeout = 10, Active = true, ContentMimeType = MimeType.ImagePng, ContentSubject = "Pseduo Notification", ContentCaption = "Pseduo advertisement", ContentBody = "http://www.abc.com/images/img1.png" },
+                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 2, Name = "Demo Notification 1", SortOrder = 1, Timeout = 10, Active = true, ContentMimeType = MimeType.ImageJpeg, ContentSubject = "Advertisement for Doughnut", ContentCaption = "4 Delicious Doughnuts", ContentBody = "https://static.pexels.com/photos/273773/pexels-photo-273773.jpeg" },
+                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 2, Name = "Demo Notification 2", SortOrder = 2, Timeout = 10, Active = true, ContentMimeType = MimeType.ImageJpeg, ContentSubject = "Advertisement for Croissant", ContentCaption = "Croissant for breakfast needs", ContentBody = "https://static.pexels.com/photos/41298/background-bakery-breakfast-bun-41298.jpeg" }
                         };
                         foreach (Notification notification in notifications)
                         {
                             configurationData.Notifications.Add(notification);
                         }
-                        Context.Logger.LogLine("2 Notifications added");
+                        Context.Logger.LogLine("3 Notifications added");
 
                         // SAVING the changes into physical DB
                         await configurationData.SaveChangesAsync();
@@ -178,26 +179,28 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding Coupons
                         var coupons = new Coupon[]
                         {
-                            new Coupon{ ClientSpotID = 1, NotificationID = 1, Name = "Coupon for Coke", CouponCode = "09876543210", Description = "Save $0.99", DiscountCents = 99.0 },
-                            new Coupon{ ClientSpotID = 1, NotificationID = 2, Name = "Coupon for Cereal", CouponCode = "09876543211", Description = "Save $0.49", DiscountCents = 49.0 }
+                            new Coupon{ ClientSpotID = 1, NotificationID = 1, Name = "Pseduo Coupon", CouponCode = "00000000000", Description = "Save $0.00", DiscountCents = 0.0 },
+                            new Coupon{ ClientSpotID = 1, NotificationID = 2, Name = "Demo Doughnut Coupon", CouponCode = "09876543210", Description = "SAVE $1.99", DiscountCents = 199.0 },
+                            new Coupon{ ClientSpotID = 1, NotificationID = 3, Name = "Demo Croissant Coupon", CouponCode = "09876543211", Description = "SAVE $0.49", DiscountCents = 49.0 }
                         };
                         foreach (Coupon coupon in coupons)
                         {
                             configurationData.Coupons.Add(coupon);
                         }
-                        Context.Logger.LogLine("2 Coupons added");
+                        Context.Logger.LogLine("3 Coupons added");
 
                         // Adding Users
                         var users = new User[]
                         {
-                            new User{ Type = UserType.Registered, Name = "John Doe", Email = "john.doe@abc.com" },
+                            new User{ Type = UserType.Registered, Name = "Pseduo User", Email = "pseduo.user@example.com" },
+                            new User{ Type = UserType.Registered, Name = "Demo User", Email = "demo.user@example.com" },
                             new User{ Type = UserType.Guest }
                         };
                         foreach (User user in users)
                         {
                             configurationData.Users.Add(user);
                         }
-                        Context.Logger.LogLine("2 Users added");
+                        Context.Logger.LogLine("3 Users added");
 
                         // SAVING the changes into physical DB
                         await configurationData.SaveChangesAsync();
@@ -251,19 +254,18 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding ClientUsers
                         var clientUsers = new ClientUser[]
                         {
-                            new ClientUser{ ClientID = 1, UserID = 1, VisitedAt = DateTime.UtcNow },
-                            new ClientUser{ ClientID = 1, UserID = 2, VisitedAt = DateTime.UtcNow }
+                            new ClientUser{ ClientID = 1, UserID = 1, VisitedAt = DateTime.UtcNow }
                         };
                         foreach (ClientUser clientUser in clientUsers)
                         {
                             transactionalData.ClientUsers.Add(clientUser);
                         }
-                        Context.Logger.LogLine("2 ClientUsers added");
+                        Context.Logger.LogLine("1 ClientUser added");
 
                         // Adding UserCoupons
                         var userCoupons = new UserCoupon[]
                         {
-                            new UserCoupon{ UserID = 2, CouponID = 2, ReceivedAt = DateTime.UtcNow, CouponRedempted = false }
+                            new UserCoupon{ UserID = 1, CouponID = 1, ReceivedAt = DateTime.UtcNow, CouponRedempted = false }
                         };
                         foreach (UserCoupon userCoupon in userCoupons)
                         {
@@ -343,20 +345,11 @@ namespace HWC_SeedDemoContentIntoDB
                                             IsUserExists = true,
                                             BufferedShowNotificationID = 1,
                                             CurrentShowNotificationExpireAt = DateTime.UtcNow.AddSeconds(10),
-                                            DisplayTouchedNotificationID = 2,
+                                            DisplayTouchedNotificationID = 1,
                                             DisplayTouchedAt = DateTime.UtcNow.AddSeconds(5)
-                                        },
-                                        new DisplaySession()
-                                        {
-                                            DisplayEndpointID = 2,
-                                            IsUserExists = false,
-                                            BufferedShowNotificationID = null,
-                                            CurrentShowNotificationExpireAt = null,
-                                            DisplayTouchedNotificationID = null,
-                                            DisplayTouchedAt = null
                                         }
                                     },
-                                    LastFlushedAt = DateTime.UtcNow.AddSeconds(-3)
+                                    LastFlushedAt = DateTime.UtcNow
                                 };
 
                                 // SAVING the item into physical DisplayConcurrentList DB Table
@@ -374,24 +367,6 @@ namespace HWC_SeedDemoContentIntoDB
                                         new ZoneSession()
                                         {
                                             ZoneID = 1,
-                                            UserConcurrentList = new UserConcurrentList()
-                                            {
-                                                LastFlushedAt = DateTime.UtcNow,
-                                                UserSessions = new List<UserSession>()
-                                                {
-                                                    new UserSession()
-                                                    {
-                                                        UserID = 2,
-                                                        EnteredIntoZoneAt = DateTime.UtcNow.AddSeconds(-12),
-                                                        LastSeenInZoneAt = DateTime.UtcNow.AddSeconds(-2),
-                                                        ReceivedCouponIDs = new List<long>() { 2 }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        new ZoneSession()
-                                        {
-                                            ZoneID = 2,
                                             UserConcurrentList = new UserConcurrentList()
                                             {
                                                 LastFlushedAt = DateTime.UtcNow,
