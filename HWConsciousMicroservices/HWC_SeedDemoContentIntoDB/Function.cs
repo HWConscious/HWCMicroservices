@@ -165,7 +165,8 @@ namespace HWC_SeedDemoContentIntoDB
                         {
                             new Notification{ ClientSpotID = 1, DisplayEndpointID = 1, Name = "Pseduo Notification", SortOrder = 1, Timeout = 10, Active = true, ContentMimeType = MimeType.ImagePng, ContentSubject = "Pseduo Notification", ContentCaption = "Pseduo advertisement", ContentBody = "http://www.abc.com/images/img1.png" },
                             new Notification{ ClientSpotID = 1, DisplayEndpointID = 2, Name = "Demo Notification 1", SortOrder = 1, Timeout = 10, Active = true, ContentMimeType = MimeType.ImageJpeg, ContentSubject = "Advertisement for Doughnut", ContentCaption = "4 Delicious Doughnuts", ContentBody = "https://static.pexels.com/photos/273773/pexels-photo-273773.jpeg" },
-                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 2, Name = "Demo Notification 2", SortOrder = 2, Timeout = 10, Active = true, ContentMimeType = MimeType.ImageJpeg, ContentSubject = "Advertisement for Croissant", ContentCaption = "Croissant for breakfast needs", ContentBody = "https://static.pexels.com/photos/41298/background-bakery-breakfast-bun-41298.jpeg" }
+                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 2, Name = "Demo Notification 2", SortOrder = 2, Timeout = 10, Active = true, ContentMimeType = MimeType.ImageJpeg, ContentSubject = "Advertisement for Croissant", ContentCaption = "Croissant for breakfast needs", ContentBody = "https://static.pexels.com/photos/41298/background-bakery-breakfast-bun-41298.jpeg" },
+                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 2, Name = "Demo Notification 3", SortOrder = 3, Timeout = 10, Active = true, ContentMimeType = MimeType.VideoMp4, ContentSubject = "Advertisement for Coke", ContentCaption = "Taste the Feeling", ContentBody = "https://s3.amazonaws.com/hwconscious/notifications/demo_mart/coke.mp4" }
                         };
                         foreach (Notification notification in notifications)
                         {
@@ -180,8 +181,9 @@ namespace HWC_SeedDemoContentIntoDB
                         var coupons = new Coupon[]
                         {
                             new Coupon{ ClientSpotID = 1, NotificationID = 1, Name = "Pseduo Coupon", CouponCode = "00000000000", Description = "Save $0.00", DiscountCents = 0.0 },
-                            new Coupon{ ClientSpotID = 1, NotificationID = 2, Name = "Demo Doughnut Coupon", CouponCode = "09876543210", Description = "SAVE $1.99", DiscountCents = 199.0 },
-                            new Coupon{ ClientSpotID = 1, NotificationID = 3, Name = "Demo Croissant Coupon", CouponCode = "09876543211", Description = "SAVE $0.49", DiscountCents = 49.0 }
+                            new Coupon{ ClientSpotID = 1, NotificationID = 2, Name = "Doughnut Coupon", CouponCode = "09876543210", Description = "SAVE $1.99", DiscountCents = 199.0 },
+                            new Coupon{ ClientSpotID = 1, NotificationID = 3, Name = "Croissant Coupon", CouponCode = "92186293264", Description = "SAVE $0.49", DiscountCents = 49.0 },
+                            new Coupon{ ClientSpotID = 1, NotificationID = 4, Name = "Coke Coupon", CouponCode = "97294957293", Description = "SAVE $0.20", DiscountCents = 20.0 }
                         };
                         foreach (Coupon coupon in coupons)
                         {
