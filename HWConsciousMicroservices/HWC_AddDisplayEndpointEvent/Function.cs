@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 using HWC.Core;
-using HWC.DataModel;
 using HWC.CloudService;
 
 using Amazon.Lambda.Core;
@@ -21,10 +19,14 @@ namespace HWC_AddDisplayEndpointEvent
 {
     public class Function
     {
+        #region Data members
+
         private long? _displayEndpointID = null;
         private DataClient _dataClient = null;
 
         public ILambdaContext Context = null;
+
+        #endregion
 
         /// <summary>
         /// Adds a DisplayEndpoint Event
@@ -168,17 +170,11 @@ namespace HWC_AddDisplayEndpointEvent
             try
             {
                 bool isDataModified = false;
-                DisplayConcurrentList displayConcurrentList = null;
 
                 if (e != null)
                 {
-                    // Get the DisplayConcurrentList
-                    List<DisplayConcurrentList> items = await _dataClient?.TransientData?.ScanAsync<DisplayConcurrentList>(null).GetNextSetAsync();
-                    displayConcurrentList = (items?.Any() ?? false) ? items.FirstOrDefault() : null;
-
-                    // Retrieve DisplaySession for the DisplayEndpoint
-                    DisplaySession displaySession = displayConcurrentList?.DisplaySessions?
-                        .SingleOrDefault(dS => dS.DisplayEndpointID == _displayEndpointID);
+                    // Retrieve the DisplayEndpoint's respective DisplaySession
+                    var displaySession = (await _dataClient?.TransientData?.ObtainDisplayConcurrentListAsync())?.ObtainDisplaySession(_displayEndpointID.Value);
 
                     // Assign touch info and reset show-notification info
                     if(displaySession != null)
@@ -189,13 +185,13 @@ namespace HWC_AddDisplayEndpointEvent
                         displaySession.BufferedShowNotificationID = null;
                         isDataModified = true;
                     }
-                }
 
-                if (isDataModified)
-                {
-                    // Save the updated DisplaySessions
-                    await _dataClient.TransientData.SaveAsync<DisplayConcurrentList>(displayConcurrentList);
-                    Context.Logger.LogLine("DisplaySession updated");
+                    if (isDataModified)
+                    {
+                        // Save the updated DisplaySessions
+                        await _dataClient.TransientData.SaveDisplayConcurrentListAsync();
+                        Context.Logger.LogLine("DisplaySession updated");
+                    }
                 }
             }
             catch (Exception ex)

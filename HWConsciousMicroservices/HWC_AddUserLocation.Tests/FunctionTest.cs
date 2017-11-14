@@ -32,8 +32,7 @@ namespace HWC_AddUserLocation.Tests
         {
             // Arrange
             long userID = 1;
-            string deviceID = "0e8cedd0-ad98-11e6"; // Associated with ZoneID:1
-            //string deviceID = "4f6cegh4-34fg-90d7"; // Associated with ZoneID:2
+            string deviceID = "pseudo-uuid";
             Location location = new Location(LocationDeviceType.IBeacon, deviceID);
 
             string userIdRequestPathName = "user-id";

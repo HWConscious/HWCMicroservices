@@ -32,7 +32,7 @@ namespace HWC_AddDisplayEndpointEvent.Tests
         {
             // Arrange
             long displayEndpointID = 1;
-            long notificationID = 2;
+            long notificationID = 1;
             Event e = new Event(EventType.DisplayEndpoint_Touch, DateTime.UtcNow, EventSourceType.Notification, notificationID);
 
             string displayEndpointIdRequestPathName = "display-endpoint-id";
