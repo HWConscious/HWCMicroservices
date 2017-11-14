@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.12
+VisualStudioVersion = 15.0.27004.2005
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HWC_AddUserLocation", "HWC_AddUserLocation\HWC_AddUserLocation.csproj", "{765AE41A-1265-4CE6-8618-926B76233B79}"
 EndProject
@@ -22,6 +22,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HWC_FlushConcurrentLists", "HWC_FlushConcurrentLists\HWC_FlushConcurrentLists.csproj", "{69F83CC7-E517-4BBD-B402-AEDF84EB0B8D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HWC_FlushConcurrentLists.Tests", "HWC_FlushConcurrentLists.Tests\HWC_FlushConcurrentLists.Tests.csproj", "{67FD5A0D-1965-4088-897C-95710BCC896B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HWC_AddMovingBeaconLocation", "HWC_AddMovingBeaconLocation\HWC_AddMovingBeaconLocation.csproj", "{98E4EEF9-61D4-4B25-8792-DF3FB8F38583}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HWC_AddMovingBeaconLocation.Tests", "HWC_AddMovingBeaconLocation.Tests\HWC_AddMovingBeaconLocation.Tests.csproj", "{2B56A4D4-589C-4603-9832-3C96E2AD5EF9}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Microservices", "Microservices", "{510F8D63-5AD6-4C4F-98BE-E5DBD3C9CC64}"
 EndProject
@@ -73,6 +77,14 @@ Global
 		{67FD5A0D-1965-4088-897C-95710BCC896B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67FD5A0D-1965-4088-897C-95710BCC896B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67FD5A0D-1965-4088-897C-95710BCC896B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98E4EEF9-61D4-4B25-8792-DF3FB8F38583}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98E4EEF9-61D4-4B25-8792-DF3FB8F38583}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98E4EEF9-61D4-4B25-8792-DF3FB8F38583}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98E4EEF9-61D4-4B25-8792-DF3FB8F38583}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B56A4D4-589C-4603-9832-3C96E2AD5EF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B56A4D4-589C-4603-9832-3C96E2AD5EF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B56A4D4-589C-4603-9832-3C96E2AD5EF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B56A4D4-589C-4603-9832-3C96E2AD5EF9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -88,5 +100,10 @@ Global
 		{D3C5D9FF-33D4-491C-BB13-4815E244C355} = {BEE2CF2D-15C3-4099-94D3-C6A717E0DC8B}
 		{69F83CC7-E517-4BBD-B402-AEDF84EB0B8D} = {510F8D63-5AD6-4C4F-98BE-E5DBD3C9CC64}
 		{67FD5A0D-1965-4088-897C-95710BCC896B} = {BEE2CF2D-15C3-4099-94D3-C6A717E0DC8B}
+		{98E4EEF9-61D4-4B25-8792-DF3FB8F38583} = {510F8D63-5AD6-4C4F-98BE-E5DBD3C9CC64}
+		{2B56A4D4-589C-4603-9832-3C96E2AD5EF9} = {BEE2CF2D-15C3-4099-94D3-C6A717E0DC8B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6D4C46EA-720B-42FF-8D7D-93A607FE3BBF}
 	EndGlobalSection
 EndGlobal

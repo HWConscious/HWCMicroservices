@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="HWC_Core">
-      <HintPath>..\..\..\HWCCore\HWConsciousCore\HWC_Core\obj\Debug\netstandard1.6\HWC_Core.dll</HintPath>
+    <Reference Include="HWC.Core">
+      <HintPath>..\..\..\HWCCore\HWConsciousCore\HWC_Core\obj\Debug\netstandard1.6\HWC.Core.dll</HintPath>
     </Reference>
   </ItemGroup>
 

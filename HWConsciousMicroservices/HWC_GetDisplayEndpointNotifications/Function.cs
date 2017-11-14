@@ -21,10 +21,14 @@ namespace HWC_GetDisplayEndpointNotifications
 {
     public class Function
     {
+        #region Data members
+
         private long? _displayEndpointID = null;
         private DataClient _dataClient = null;
 
         public ILambdaContext Context = null;
+
+        #endregion
 
         /// <summary>
         /// Returns a Notification belongs to a DisplayEndpoint
@@ -110,7 +114,7 @@ namespace HWC_GetDisplayEndpointNotifications
 
                         // Exclude undesired properties from the returning json object
                         var jsonResolver = new IgnorableSerializerContractResolver();
-                        jsonResolver.Ignore(typeof(Notification), new string[] { "ClientSpot", "DisplayEndpoint" });
+                        jsonResolver.Ignore(typeof(Notification), new string[] { "ClientSpot", "LocationDeviceNotifications", "DisplayEndpointNotifications" });
                         jsonResolver.Ignore(typeof(Coupon), new string[] { "ClientSpot", "Notification" });
                         
                         // Respond OK
@@ -147,48 +151,55 @@ namespace HWC_GetDisplayEndpointNotifications
             try
             {
                 bool isDataModified = false;
-                DisplayConcurrentList displayConcurrentList = null;
 
-                // Retrieve the list of active Notifications
-                List<Notification> activeNotifications = displayEndpoint?.Notifications?
-                    .Where(n => n.Active == true).ToList();
-
-                if (activeNotifications?.Any() ?? false)
+                // Retrieve the DisplayEndpoint's respective DisplaySession
+                DisplaySession displaySession = (await _dataClient?.TransientData?.ObtainDisplayConcurrentListAsync())?.ObtainDisplaySession(_displayEndpointID.Value);
+                if (displaySession != null)
                 {
-                    // Get the DisplayConcurrentList
-                    List<DisplayConcurrentList> items = await _dataClient?.TransientData?.ScanAsync<DisplayConcurrentList>(null).GetNextSetAsync();
-                    displayConcurrentList = (items?.Any() ?? false) ? items.FirstOrDefault() : null;
-
-                    // Retrieve DisplaySession for the DisplayEndpoint
-                    DisplaySession displaySession = displayConcurrentList?.DisplaySessions?
-                        .SingleOrDefault(dS => dS.DisplayEndpointID == _displayEndpointID);
-
-                    // Generate Notification to show and save to the DisplaySession
-                    if (displaySession?.IsUserExists ?? false)
+                    // Fetch Notification to return and
+                    // update the DisplaySession accordingly
+                    if (displaySession.LocationDeviceID != null)
                     {
-                        if (displaySession.BufferedShowNotificationID == null)
+                        // Retrieve the Notification for the LocationDevice and return only if it's 'Active'
+                        var notification = (await _dataClient?.ConfigurationData?.LocationDevices?
+                            .Include(lD => lD.LocationDeviceNotifications)
+                                .ThenInclude(lDN => lDN.Notification)
+                            .AsNoTracking()
+                            .SingleOrDefaultAsync(lD => lD.LocationDeviceID == displaySession.LocationDeviceID))?.LocationDeviceNotifications?.FirstOrDefault()?.Notification;
+                        notificationToReturn = notification?.Active ?? false == true ? notification : null;
+                    }
+                    else if (displaySession.IsUserExists)
+                    {
+                        // Retrieve the list of active Notifications
+                        List<Notification> activeNotifications = displayEndpoint?.DisplayEndpointNotifications?.Select(dEN => dEN.Notification)?
+                            .Where(n => n.Active == true).ToList();
+
+                        if (activeNotifications?.Any() ?? false)
                         {
-                            notificationToReturn = GetARandomNotificationFromAList(activeNotifications);
-                            displaySession.BufferedShowNotificationID = GetARandomNotificationFromAList(activeNotifications, notificationToReturn?.NotificationID)?.NotificationID;
-                            displaySession.CurrentShowNotificationExpireAt = DateTime.UtcNow.AddSeconds(notificationToReturn?.Timeout ?? 0);
-                            isDataModified = true;
-                        }
-                        else
-                        {
-                            if (DateTime.UtcNow <= displaySession.CurrentShowNotificationExpireAt.Value.ToUniversalTime())
+                            if (displaySession.BufferedShowNotificationID == null)
                             {
-                                notificationToReturn = activeNotifications
-                                    .SingleOrDefault(n => n.NotificationID == displaySession.BufferedShowNotificationID);
+                                notificationToReturn = GetARandomNotificationFromAList(activeNotifications);
+                                displaySession.BufferedShowNotificationID = GetARandomNotificationFromAList(activeNotifications, notificationToReturn?.NotificationID)?.NotificationID;
+                                displaySession.CurrentShowNotificationExpireAt = DateTime.UtcNow.AddSeconds(notificationToReturn?.Timeout ?? 0);
+                                isDataModified = true;
                             }
                             else
                             {
-                                var lastBufferedShowNotification = activeNotifications
-                                    .SingleOrDefault(n => n.NotificationID == displaySession.BufferedShowNotificationID);
+                                if (DateTime.UtcNow <= displaySession.CurrentShowNotificationExpireAt.Value.ToUniversalTime())
+                                {
+                                    notificationToReturn = activeNotifications
+                                        .SingleOrDefault(n => n.NotificationID == displaySession.BufferedShowNotificationID);
+                                }
+                                else
+                                {
+                                    var lastBufferedShowNotification = activeNotifications
+                                        .SingleOrDefault(n => n.NotificationID == displaySession.BufferedShowNotificationID);
 
-                                notificationToReturn = GetARandomNotificationFromAList(activeNotifications, displaySession.BufferedShowNotificationID);
-                                displaySession.BufferedShowNotificationID = notificationToReturn?.NotificationID;
-                                displaySession.CurrentShowNotificationExpireAt = displaySession.CurrentShowNotificationExpireAt.Value.AddSeconds(lastBufferedShowNotification?.Timeout ?? 0).ToUniversalTime();
-                                isDataModified = true;
+                                    notificationToReturn = GetARandomNotificationFromAList(activeNotifications, displaySession.BufferedShowNotificationID);
+                                    displaySession.BufferedShowNotificationID = notificationToReturn?.NotificationID;
+                                    displaySession.CurrentShowNotificationExpireAt = displaySession.CurrentShowNotificationExpireAt.Value.AddSeconds(lastBufferedShowNotification?.Timeout ?? 0).ToUniversalTime();
+                                    isDataModified = true;
+                                }
                             }
                         }
                     }
@@ -197,7 +208,7 @@ namespace HWC_GetDisplayEndpointNotifications
                 if (isDataModified)
                 {
                     // Save the updated DisplaySessions
-                    await _dataClient.TransientData.SaveAsync<DisplayConcurrentList>(displayConcurrentList);
+                    await _dataClient.TransientData.SaveDisplayConcurrentListAsync();
                     Context.Logger.LogLine("DisplaySession updated");
                 }
             }
@@ -223,8 +234,9 @@ namespace HWC_GetDisplayEndpointNotifications
             try
             {
                 return await _dataClient?.ConfigurationData?.DisplayEndpoints?
-                    .Include(dE => dE.Notifications)
-                        .ThenInclude(n => n.Coupons)
+                    .Include(dE => dE.DisplayEndpointNotifications)
+                        .ThenInclude(dEN => dEN.Notification)
+                            .ThenInclude(n => n.Coupons)
                     .AsNoTracking()
                     .SingleOrDefaultAsync(dE => dE.DisplayEndpointID == _displayEndpointID);
             }

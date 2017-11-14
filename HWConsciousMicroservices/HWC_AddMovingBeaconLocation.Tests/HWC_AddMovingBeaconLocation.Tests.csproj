@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp1.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+
+    <PackageReference Include="Amazon.Lambda.Core" Version="1.0.0" />
+    <PackageReference Include="Amazon.Lambda.TestUtilities" Version="1.0.0" />
+
+    <PackageReference Include="xunit" Version="2.2.0" />
+
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HWC_AddMovingBeaconLocation\HWC_AddMovingBeaconLocation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="HWC.Core">
+      <HintPath>..\..\..\HWCCore\HWConsciousCore\HWC_Core\obj\Debug\netstandard1.6\HWC.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
