@@ -186,7 +186,7 @@ namespace HWC_FlushConcurrentLists
                             {
                                 displaySession.IsUserExists = false;
                                 displaySession.BufferedShowNotificationID = null;
-                                if (displaySession.CurrentShowNotificationExpireAt.Value.ToUniversalTime() < DateTime.UtcNow)
+                                if (displaySession.CurrentShowNotificationExpireAt != null && displaySession.CurrentShowNotificationExpireAt.Value.ToUniversalTime() < DateTime.UtcNow)
                                 {
                                     displaySession.CurrentShowNotificationExpireAt = null;
                                 }
