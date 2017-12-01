@@ -21,6 +21,8 @@ namespace HWC_AddUserLocation
 {
     public class Function
     {
+        #region Data members
+
         private long? _userID = null;
         private DataClient _dataClient = null;
         private LocationDevice _locationDevice = null;
@@ -28,7 +30,9 @@ namespace HWC_AddUserLocation
         private ZoneConcurrentList _zoneConcurrentList = null;
         
         public ILambdaContext Context = null;
-        
+
+        #endregion
+
         /// <summary>
         /// Adds an User Location and returns Coupons for the User (if any)
         /// </summary>
@@ -214,52 +218,53 @@ namespace HWC_AddUserLocation
 
             try
             {
-                // Retrieve DisplayEndpointIDs in the Zone
-                var zoneDisplayEndpointIDs = _locationDevice?.Zone?.DisplayEndpoints?
-                    .Select(dE => dE.DisplayEndpointID);
-
-                // Retrieve NotificationIDs (only the ones are touched) associated with the DisplayEndpoints in the Zone
-                var touchedNotificationIDs = _displayConcurrentList?.DisplaySessions?
-                    .Where(dS => zoneDisplayEndpointIDs?.Contains(dS.DisplayEndpointID) ?? false)
-                    .Where(dS => dS.DisplayTouchedNotificationID != null)
-                    .Select(dS => dS.DisplayTouchedNotificationID);
-
-                // Retrieve Coupons associated with the touched Notifications
-                var coupons = _dataClient?.ConfigurationData?.Coupons?
-                    .Where(c => touchedNotificationIDs.Contains(c.NotificationID));
-
-                // Retrieve the User's respective UserSession 
-                var userSession = _zoneConcurrentList?.ZoneSessions?
-                    .SingleOrDefault(zS => zS.ZoneID == _locationDevice?.ZoneID).UserConcurrentList?.UserSessions?
-                        .SingleOrDefault(uS => uS.UserID == _userID);
-
-                // Create a new list of Coupons from the retrieved Coupons (associated with the touched Notifications),
-                // which are not received by the User for the UserSession yet
-                couponsToReturn = coupons?
-                    .Where(c => !userSession.ReceivedCouponIDs.Contains(c.CouponID)).ToList();
-                var couponsToReturnIDs = couponsToReturn?
-                    .Select(c => c.CouponID);
-
-                if (couponsToReturnIDs?.Any() ?? false)
+                if (_locationDevice != null)
                 {
-                    // Update the UserSession's received-coupons-registry with the new list of Coupons
-                    userSession?.ReceivedCouponIDs?.AddRange(couponsToReturnIDs);
+                    // Retrieve DisplayEndpointIDs in the Zone
+                    var zoneDisplayEndpointIDs = _locationDevice?.Zone?.DisplayEndpoints?
+                        .Select(dE => dE.DisplayEndpointID);
 
-                    // Add the new list of Coupons to transactional data
-                    var userCoupons = new List<UserCoupon>();
-                    foreach(long couponID in couponsToReturnIDs)
+                    // Retrieve NotificationIDs (only the ones are touched) associated with the DisplayEndpoints in the Zone
+                    var touchedNotificationIDs = _displayConcurrentList?.DisplaySessions?
+                        .Where(dS => zoneDisplayEndpointIDs?.Contains(dS.DisplayEndpointID) ?? false)
+                        .Where(dS => dS.DisplayTouchedNotificationID != null)
+                        .Select(dS => dS.DisplayTouchedNotificationID);
+
+                    // Retrieve Coupons associated with the touched Notifications
+                    var coupons = _dataClient?.ConfigurationData?.Coupons?
+                        .Where(c => touchedNotificationIDs.Contains(c.NotificationID));
+
+                    // Retrieve the User's respective UserSession
+                    var userSession = _zoneConcurrentList?.ObtainZoneSession(_locationDevice.ZoneID.Value)?.UserConcurrentList?.ObtainUserSession(_userID.Value);
+
+                    // Create a new list of Coupons from the retrieved Coupons (associated with the touched Notifications),
+                    // which are not received by the User for the UserSession yet
+                    couponsToReturn = coupons?
+                        .Where(c => !userSession.ReceivedCouponIDs.Contains(c.CouponID)).ToList();
+                    var couponsToReturnIDs = couponsToReturn?
+                        .Select(c => c.CouponID);
+
+                    if (couponsToReturnIDs?.Any() ?? false)
                     {
-                        userCoupons.Add(new UserCoupon()
-                        {
-                            UserID = _userID.Value,
-                            CouponID = couponID,
-                            ReceivedAt = DateTime.UtcNow,
-                            CouponRedempted = false
-                        });
-                    }
-                    _dataClient?.TransactionalData?.UserCoupons?.AddRange(userCoupons);
+                        // Update the UserSession's received-coupons-registry with the new list of Coupons
+                        userSession?.ReceivedCouponIDs?.AddRange(couponsToReturnIDs);
 
-                    isDataModified = true;
+                        // Add the new list of Coupons to transactional data
+                        var userCoupons = new List<UserCoupon>();
+                        foreach (long couponID in couponsToReturnIDs)
+                        {
+                            userCoupons.Add(new UserCoupon()
+                            {
+                                UserID = _userID.Value,
+                                CouponID = couponID,
+                                ReceivedAt = DateTime.UtcNow,
+                                CouponRedempted = false
+                            });
+                        }
+                        _dataClient?.TransactionalData?.UserCoupons?.AddRange(userCoupons);
+
+                        isDataModified = true;
+                    }
                 }
             }
             catch (Exception ex)
@@ -272,7 +277,7 @@ namespace HWC_AddUserLocation
                 try
                 {
                     // Save the updated UserSessions
-                    await _dataClient.TransientData.SaveAsync<ZoneConcurrentList>(_zoneConcurrentList);
+                    await _dataClient.TransientData.SaveZoneConcurrentListAsync();
                     Context.Logger.LogLine("UserSessions updated for received-coupons-registry");
                     
                     // Save the updated UserCoupons
@@ -290,8 +295,7 @@ namespace HWC_AddUserLocation
         }
 
         /// <summary>
-        /// Updates the DisplayConcurrentList for DisplaySession's notification invocation & expiration timestamps
-        /// Also creates the DisplaySessions if doesn't exists
+        /// Updates the DisplayConcurrentList for DisplaySession's 'IsUserExists' flag
         /// </summary>
         /// <returns></returns>
         private async Task UpdateDisplayConcurrentListAsync()
@@ -299,37 +303,18 @@ namespace HWC_AddUserLocation
             try
             {
                 bool isDataModified = false;
-
-                // Get the DisplayConcurrentList
-                if (_displayConcurrentList == null)
-                {
-                    List<DisplayConcurrentList> items = await _dataClient?.TransientData?.ScanAsync<DisplayConcurrentList>(null).GetNextSetAsync();
-                    // Create new DisplayConcurrentList if it doesn't exists
-                    _displayConcurrentList = (items?.Any() ?? false) ? items.FirstOrDefault() : InitializeDisplayConcurrentList();
-                }
-
+                _displayConcurrentList = await _dataClient?.TransientData?.ObtainDisplayConcurrentListAsync();
                 if (_displayConcurrentList != null)
                 {
-                    _displayConcurrentList.DisplaySessions = _displayConcurrentList.DisplaySessions ?? new List<DisplaySession>();
-
                     // Traverse through each DisplayEndpoints in the Zone
                     foreach (DisplayEndpoint displayEndpoint in _locationDevice.Zone.DisplayEndpoints)
                     {
                         // Process the DisplayEndpoint only if there is one or more than one Notifications associated with it
-                        if (displayEndpoint.Notifications?.Any() ?? false)
+                        if (displayEndpoint.DisplayEndpointNotifications?.Any() ?? false)
                         {
-                            // Try to get the DisplayEndpoint's respective DisplaySession from DisplayConcurrentList, create new if not exists.
-                            DisplaySession displaySession = _displayConcurrentList.DisplaySessions
-                                .Where(dS => dS.DisplayEndpointID == displayEndpoint.DisplayEndpointID)
-                                .FirstOrDefault();
-                            if (displaySession == null)
-                            {
-                                // Create new DisplaySession for the DisplayEndpoint
-                                displaySession = new DisplaySession() { DisplayEndpointID = displayEndpoint.DisplayEndpointID };
-                                _displayConcurrentList.DisplaySessions.Add(displaySession);
-                            }
-
-                            if (!displaySession.IsUserExists)
+                            // Retrieve the DisplayEndpoint's respective DisplaySession
+                            var displaySession = _displayConcurrentList.ObtainDisplaySession(displayEndpoint.DisplayEndpointID);
+                            if (!displaySession?.IsUserExists ?? false)
                             {
                                 displaySession.IsUserExists = true;
                                 isDataModified = true;
@@ -341,7 +326,7 @@ namespace HWC_AddUserLocation
                 if (isDataModified)
                 {
                     // Save the updated DisplaySessions
-                    await _dataClient.TransientData.SaveAsync<DisplayConcurrentList>(_displayConcurrentList);
+                    await _dataClient.TransientData.SaveDisplayConcurrentListAsync();
                     Context.Logger.LogLine("DisplaySessions updated");
                 }
             }
@@ -353,7 +338,6 @@ namespace HWC_AddUserLocation
 
         /// <summary>
         /// Updates the ZoneConcurrentList for UserSession's zone-enter and zone-last-seen timestamps
-        /// Also creates the UserSessions if doesn't exists
         /// </summary>
         /// <returns></returns>
         private async Task UpdateZoneConcurrentListAsync()
@@ -361,59 +345,23 @@ namespace HWC_AddUserLocation
             try
             {
                 bool isDataModified = false;
-
-                // Get the ZoneConcurrentList
-                if (_zoneConcurrentList == null)
-                {
-                    List<ZoneConcurrentList> items = await _dataClient?.TransientData?.ScanAsync<ZoneConcurrentList>(null).GetNextSetAsync();
-                    // Create new ZoneConcurrentList if it doesn't exists
-                    _zoneConcurrentList = (items?.Any() ?? false) ? items.FirstOrDefault() : InitializeZoneConcurrentList();
-                }
-
+                _zoneConcurrentList = await _dataClient?.TransientData?.ObtainZoneConcurrentListAsync();
                 if (_zoneConcurrentList != null)
                 {
-                    _zoneConcurrentList.ZoneSessions = _zoneConcurrentList.ZoneSessions ?? new List<ZoneSession>();
-
-                    // Try to get the Zone's respective ZoneSession from ZoneConcurrentList, create new if not exists.
-                    ZoneSession zoneSession = _zoneConcurrentList.ZoneSessions
-                        .Where(zS => zS.ZoneID == _locationDevice.ZoneID)
-                        .FirstOrDefault();
-                    if (zoneSession == null)
+                    // Retrieve the User's respective UserSession
+                    var userSession = _zoneConcurrentList.ObtainZoneSession(_locationDevice.ZoneID.Value)?.UserConcurrentList?.ObtainUserSession(_userID.Value);
+                    if (userSession != null)
                     {
-                        zoneSession = new ZoneSession() { ZoneID = _locationDevice.ZoneID.Value };
-                        _zoneConcurrentList.ZoneSessions.Add(zoneSession);
-                    }
-                    zoneSession.UserConcurrentList = zoneSession.UserConcurrentList ?? new UserConcurrentList();
-                    zoneSession.UserConcurrentList.UserSessions = zoneSession.UserConcurrentList.UserSessions ?? new List<UserSession>();
-                    
-                    // Try to get the User's respective UserSession from UserConcurrentList, create new if not exists.
-                    UserSession userSession = zoneSession.UserConcurrentList.UserSessions
-                        .Where(uS => uS.UserID == _userID)
-                        .FirstOrDefault();
-                    if (userSession == null)
-                    {
-                        // Create new UserSession for the User with zone-enter and zone-last-seen timestamps as current time
-                        userSession = new UserSession()
-                        {
-                            UserID = _userID.Value,
-                            EnteredIntoZoneAt = DateTime.UtcNow,
-                            LastSeenInZoneAt = DateTime.UtcNow,
-                            ReceivedCouponIDs = new List<long>()
-                        };
-                        zoneSession.UserConcurrentList.UserSessions.Add(userSession);
-                    }
-                    else
-                    {
-                        // Update the existing UserSession's zone-last-seen timestamp as current time
+                        userSession.EnteredIntoZoneAt = userSession.EnteredIntoZoneAt ?? DateTime.UtcNow;
                         userSession.LastSeenInZoneAt = DateTime.UtcNow;
+                        isDataModified = true;
                     }
-                    isDataModified = true;
                 }
 
                 if (isDataModified)
                 {
                     // Save the updated UserSessions
-                    await _dataClient.TransientData.SaveAsync<ZoneConcurrentList>(_zoneConcurrentList);
+                    await _dataClient.TransientData.SaveZoneConcurrentListAsync();
                     Context.Logger.LogLine("UserSessions updated");
                 }
             }
@@ -458,9 +406,10 @@ namespace HWC_AddUserLocation
                     return await _dataClient?.ConfigurationData?.LocationDevices?
                         .Include(lD => lD.Zone)
                             .ThenInclude(z => z.DisplayEndpoints)
-                                .ThenInclude(dE => dE.Notifications)
+                                .ThenInclude(dE => dE.DisplayEndpointNotifications)
+                                    .ThenInclude(dEN => dEN.Notification)
                         .AsNoTracking()
-                        .SingleOrDefaultAsync(lD => lD.DeviceID == location.DeviceID);
+                        .SingleOrDefaultAsync(lD => lD.DeviceID.Equals(location.DeviceID, StringComparison.OrdinalIgnoreCase));
                 }
             }
             catch (Exception ex)
@@ -469,25 +418,7 @@ namespace HWC_AddUserLocation
             }
             return null;
         }
-
-        private DisplayConcurrentList InitializeDisplayConcurrentList()
-        {
-            return new DisplayConcurrentList()
-            {
-                ID = Guid.NewGuid(),
-                DisplaySessions = new List<DisplaySession>()
-            };
-        }
-
-        private ZoneConcurrentList InitializeZoneConcurrentList()
-        {
-            return new ZoneConcurrentList()
-            {
-                ID = Guid.NewGuid(),
-                ZoneSessions = new List<ZoneSession>()
-            };
-        }
-
+        
         #endregion
     }
 }

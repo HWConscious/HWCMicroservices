@@ -12,9 +12,9 @@ using Amazon.Lambda.APIGatewayEvents;
 
 using Newtonsoft.Json;
 
-using HWC_AddUserLocation;
+using HWC_AddMovingBeaconLocation;
 
-namespace HWC_AddUserLocation.Tests
+namespace HWC_AddMovingBeaconLocation.Tests
 {
     public class FunctionTest
     {
@@ -31,14 +31,11 @@ namespace HWC_AddUserLocation.Tests
         public async void TestFunctionFlowAsync()
         {
             // Arrange
-            long userID = 1;
             string deviceID = "pseudo-uuid";
             Location location = new Location(LocationDeviceType.IBeacon, deviceID);
-
-            string userIdRequestPathName = "user-id";
+            
             APIGatewayProxyRequest request = new APIGatewayProxyRequest()
             {
-                PathParameters = new Dictionary<string, string>() { { userIdRequestPathName, userID.ToString() } },
                 Body = JsonConvert.SerializeObject(location)
             };
 

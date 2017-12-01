@@ -19,7 +19,11 @@ namespace HWC_SeedDemoContentIntoDB
 {
     public class Function
     {
+        #region Data members
+
         public ILambdaContext Context = null;
+
+        #endregion
 
         /// <summary>
         /// Seeds demo contents into HWC databases and reads
@@ -72,8 +76,11 @@ namespace HWC_SeedDemoContentIntoDB
                                                      .Include(clientSpot => clientSpot.Coupons).LoadAsync();
                         await configurationData.Zones.Include(zone => zone.LocationDevices)
                                                 .Include(zone => zone.DisplayEndpoints).LoadAsync();
-                        await configurationData.DisplayEndpoints.Include(displayEndpoint => displayEndpoint.Notifications).LoadAsync();
-                        await configurationData.Notifications.Include(notification => notification.Coupons).LoadAsync();
+                        await configurationData.LocationDevices.Include(locationDevice => locationDevice.LocationDeviceNotifications).LoadAsync();
+                        await configurationData.DisplayEndpoints.Include(displayEndpoint => displayEndpoint.DisplayEndpointNotifications).LoadAsync();
+                        await configurationData.Notifications.Include(notification => notification.Coupons)
+                                                        .Include(notification => notification.LocationDeviceNotifications)
+                                                        .Include(notification => notification.DisplayEndpointNotifications).LoadAsync();
 
 
                         ///////// DB seeding with demo content /////////
@@ -111,8 +118,8 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding ClientSpots
                         var clientSpots = new ClientSpot[]
                         {
-                            new ClientSpot{ ClientID = 1, Name = "DemoMart Seattle Store", PhoneNumber = "001-123-4567", Address = "Seattle, US" },
-                            new ClientSpot{ ClientID = 1, Name = "DemoMart LA Store", PhoneNumber = "001-123-4567", Address = "LA, US" }
+                            new ClientSpot{ ClientID = clients[0].ClientID, Name = "DemoMart Seattle Store", PhoneNumber = "001-123-4567", Address = "Seattle, US" },
+                            new ClientSpot{ ClientID = clients[0].ClientID, Name = "DemoMart LA Store", PhoneNumber = "001-123-4567", Address = "LA, US" }
                         };
                         foreach (ClientSpot clientSpot in clientSpots)
                         {
@@ -123,14 +130,16 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding Zones
                         var zones = new Zone[]
                         {
-                            new Zone{ ClientSpotID = 1, Name = "Pseudo Zone" },
-                            new Zone{ ClientSpotID = 1, Name = "Demo Bakery Zone" }
+                            new Zone{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Pseudo Zone" },
+                            new Zone{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Demo Entrance Zone (Scenario #1)" },
+                            new Zone{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Demo Bakery Zone (Scenario #2)" },
+                            new Zone{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Demo Electronics Zone (Scenario #3)" }
                         };
                         foreach (Zone zone in zones)
                         {
                             configurationData.Zones.Add(zone);
                         }
-                        Context.Logger.LogLine("2 Zones added");
+                        Context.Logger.LogLine("4 Zones added");
 
                         // SAVING the changes into physical DB
                         await configurationData.SaveChangesAsync();
@@ -138,58 +147,92 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding LocationDevices
                         var locationDevices = new LocationDevice[]
                         {
-                            new LocationDevice{ ClientSpotID = 1, ZoneID = 1, Type = LocationDeviceType.IBeacon, DeviceID = "pseudo-uuid" },
-                            new LocationDevice{ ClientSpotID = 1, ZoneID = 2, Type = LocationDeviceType.IBeacon, DeviceID = "5bf0e89a-5760-4a9d-bb8a-7a895c9c99b2" },
-                            new LocationDevice{ ClientSpotID = 1, ZoneID = 2, Type = LocationDeviceType.IBeacon, DeviceID = "12345678-1234-1234-1234-123456789012" }
+                            new LocationDevice{ ClientSpotID = clientSpots[0].ClientSpotID, ZoneID = zones[0].ZoneID, Type = LocationDeviceType.IBeacon, DeviceID = "pseudo-uuid" },
+                            new LocationDevice{ ClientSpotID = clientSpots[0].ClientSpotID, ZoneID = zones[1].ZoneID, Type = LocationDeviceType.IBeacon, DeviceID = "11111111-1111-1111-1111-111111111111" },
+                            new LocationDevice{ ClientSpotID = clientSpots[0].ClientSpotID, ZoneID = zones[2].ZoneID, Type = LocationDeviceType.IBeacon, DeviceID = "22222222-2222-2222-2222-222222222222" },
+                            new LocationDevice{ ClientSpotID = clientSpots[0].ClientSpotID, ZoneID = zones[3].ZoneID, Type = LocationDeviceType.IBeacon, DeviceID = "33333333-3333-3333-3333-333333333333" },
+                            new LocationDevice{ ClientSpotID = clientSpots[0].ClientSpotID, ZoneID = zones[3].ZoneID, Type = LocationDeviceType.IBeacon, DeviceID = "44444444-4444-4444-4444-444444444444" }
                         };
                         foreach (LocationDevice locationDevice in locationDevices)
                         {
                             configurationData.LocationDevices.Add(locationDevice);
                         }
-                        Context.Logger.LogLine("3 LocationDevices added");
+                        Context.Logger.LogLine("5 LocationDevices added");
 
                         // Adding DisplayEndpoints
                         var displayEndpoints = new DisplayEndpoint[]
                         {
-                            new DisplayEndpoint{ ClientSpotID = 1, ZoneID = 1, Name = "Pseudo Display" },
-                            new DisplayEndpoint{ ClientSpotID = 1, ZoneID = 2, Name = "Demo Display 1" }
+                            new DisplayEndpoint{ ClientSpotID = clientSpots[0].ClientSpotID, ZoneID = zones[0].ZoneID, Name = "Pseudo Display" },
+                            new DisplayEndpoint{ ClientSpotID = clientSpots[0].ClientSpotID, ZoneID = zones[1].ZoneID, Name = "Demo Display 1" },
+                            new DisplayEndpoint{ ClientSpotID = clientSpots[0].ClientSpotID, ZoneID = zones[2].ZoneID, Name = "Demo Display 2" },
+                            new DisplayEndpoint{ ClientSpotID = clientSpots[0].ClientSpotID, ZoneID = zones[3].ZoneID, Name = "Demo Display 3" }
                         };
                         foreach (DisplayEndpoint displayEndpoint in displayEndpoints)
                         {
                             configurationData.DisplayEndpoints.Add(displayEndpoint);
                         }
-                        Context.Logger.LogLine("2 DisplayEndpoints added");
+                        Context.Logger.LogLine("4 DisplayEndpoints added");
 
                         // Adding Notifications
                         var notifications = new Notification[]
                         {
-                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 1, Name = "Pseduo Notification", SortOrder = 1, Timeout = 10, Active = true, ContentMimeType = MimeType.ImagePng, ContentSubject = "Pseduo Notification", ContentCaption = "Pseduo advertisement", ContentBody = "http://www.abc.com/images/img1.png" },
-                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 2, Name = "Demo Notification 1", SortOrder = 1, Timeout = 10, Active = true, ContentMimeType = MimeType.ImageJpeg, ContentSubject = "Advertisement for Doughnut", ContentCaption = "4 Delicious Doughnuts", ContentBody = "https://static.pexels.com/photos/273773/pexels-photo-273773.jpeg" },
-                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 2, Name = "Demo Notification 2", SortOrder = 2, Timeout = 10, Active = true, ContentMimeType = MimeType.ImageJpeg, ContentSubject = "Advertisement for Croissant", ContentCaption = "Croissant for breakfast needs", ContentBody = "https://static.pexels.com/photos/41298/background-bakery-breakfast-bun-41298.jpeg" },
-                            new Notification{ ClientSpotID = 1, DisplayEndpointID = 2, Name = "Demo Notification 3", SortOrder = 3, Timeout = 10, Active = true, ContentMimeType = MimeType.VideoMp4, ContentSubject = "Advertisement for Coke", ContentCaption = "Taste the Feeling", ContentBody = "https://s3.amazonaws.com/hwconscious/notifications/demo_mart/coke.mp4" }
+                            new Notification{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Pseduo Notification", Timeout = 10, ContentMimeType = MimeType.ImagePng, ContentSubject = "Pseduo Notification", ContentCaption = "Pseduo advertisement", ContentBody = "http://www.abc.com/images/img1.png" },
+                            new Notification{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Demo Notification 1 (Scenario #1)", SortOrder = 1, Timeout = 20, ShowProgressBar = false, ContentMimeType = MimeType.ImagePng, ContentSubject = "Welcome Greetings", ContentCaption = "Welcome to DemoMart Seattle Store!", ContentBody = "https://s3.amazonaws.com/hwconscious/notifications/demo_mart/welcome.png" },
+                            new Notification{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Demo Notification 2 (Scenario #2)", SortOrder = 1, Timeout = 10, ContentMimeType = MimeType.ImageJpg, ContentSubject = "Advertisement for Doughnut", ContentCaption = "4 Delicious Doughnuts", ContentBody = "https://s3.amazonaws.com/hwconscious/notifications/demo_mart/doughnut.jpg" },
+                            new Notification{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Demo Notification 3 (Scenario #2)", SortOrder = 2, Timeout = 10, ContentMimeType = MimeType.ImageJpg, ContentSubject = "Advertisement for Croissant", ContentCaption = "Croissant for breakfast needs", ContentBody = "https://s3.amazonaws.com/hwconscious/notifications/demo_mart/croissant.jpg" },
+                            new Notification{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Demo Notification 4 (Scenario #2)", SortOrder = 3, Timeout = 10, ContentMimeType = MimeType.VideoMp4, ContentSubject = "Advertisement for Coke", ContentCaption = "Taste the Feeling", ContentBody = "https://s3.amazonaws.com/hwconscious/notifications/demo_mart/coke.mp4" },
+                            new Notification{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Demo Notification 5 (Scenario #3)", Timeout = 10, ContentMimeType = MimeType.ImageJpeg, ContentSubject = "Advertisement for Iron", ContentCaption = "Steam Iron", ContentBody = "https://s3.amazonaws.com/hwconscious/notifications/demo_mart/iron.jpeg" },
+                            new Notification{ ClientSpotID = clientSpots[0].ClientSpotID, Name = "Demo Notification 6 (Scenario #3)", Timeout = 10, ContentMimeType = MimeType.ImageJpeg, ContentSubject = "Advertisement for Smartphone", ContentCaption = "Extraordinary performance", ContentBody = "https://s3.amazonaws.com/hwconscious/notifications/demo_mart/smart-phone.jpeg" }
                         };
                         foreach (Notification notification in notifications)
                         {
                             configurationData.Notifications.Add(notification);
                         }
-                        Context.Logger.LogLine("3 Notifications added");
+                        Context.Logger.LogLine("7 Notifications added");
 
                         // SAVING the changes into physical DB
                         await configurationData.SaveChangesAsync();
 
+                        // Adding LocationDeviceNotifications
+                        var displayEndpointNotifications = new DisplayEndpointNotification[]
+                        {
+                            new DisplayEndpointNotification{ DisplayEndpointID = displayEndpoints[0].DisplayEndpointID, NotificationID = notifications[0].NotificationID },
+                            new DisplayEndpointNotification{ DisplayEndpointID = displayEndpoints[1].DisplayEndpointID, NotificationID = notifications[1].NotificationID },
+                            new DisplayEndpointNotification{ DisplayEndpointID = displayEndpoints[2].DisplayEndpointID, NotificationID = notifications[2].NotificationID },
+                            new DisplayEndpointNotification{ DisplayEndpointID = displayEndpoints[2].DisplayEndpointID, NotificationID = notifications[3].NotificationID },
+                            new DisplayEndpointNotification{ DisplayEndpointID = displayEndpoints[2].DisplayEndpointID, NotificationID = notifications[4].NotificationID }
+                        };
+                        foreach (DisplayEndpointNotification displayEndpointNotification in displayEndpointNotifications)
+                        {
+                            configurationData.DisplayEndpointNotifications.Add(displayEndpointNotification);
+                        }
+                        Context.Logger.LogLine("5 DisplayEndpointNotifications added");
+
+                        // Adding LocationDeviceNotifications
+                        var locationDeviceNotifications = new LocationDeviceNotification[]
+                        {
+                            new LocationDeviceNotification{ LocationDeviceID = locationDevices[3].LocationDeviceID, NotificationID = notifications[5].NotificationID },
+                            new LocationDeviceNotification{ LocationDeviceID = locationDevices[4].LocationDeviceID, NotificationID = notifications[6].NotificationID }
+                        };
+                        foreach (LocationDeviceNotification locationDeviceNotification in locationDeviceNotifications)
+                        {
+                            configurationData.LocationDeviceNotifications.Add(locationDeviceNotification);
+                        }
+                        Context.Logger.LogLine("2 LocationDeviceNotifications added");
+
                         // Adding Coupons
                         var coupons = new Coupon[]
                         {
-                            new Coupon{ ClientSpotID = 1, NotificationID = 1, Name = "Pseduo Coupon", CouponCode = "00000000000", Description = "Save $0.00", DiscountCents = 0.0 },
-                            new Coupon{ ClientSpotID = 1, NotificationID = 2, Name = "Doughnut Coupon", CouponCode = "09876543210", Description = "SAVE $1.99", DiscountCents = 199.0 },
-                            new Coupon{ ClientSpotID = 1, NotificationID = 3, Name = "Croissant Coupon", CouponCode = "92186293264", Description = "SAVE $0.49", DiscountCents = 49.0 },
-                            new Coupon{ ClientSpotID = 1, NotificationID = 4, Name = "Coke Coupon", CouponCode = "97294957293", Description = "SAVE $0.20", DiscountCents = 20.0 }
+                            new Coupon{ ClientSpotID = clientSpots[0].ClientSpotID, NotificationID = notifications[0].NotificationID, Name = "Pseduo Coupon", CouponCode = "00000000000", Description = "Save $0.00", DiscountCents = 0.0 },
+                            new Coupon{ ClientSpotID = clientSpots[0].ClientSpotID, NotificationID = notifications[2].NotificationID, Name = "Doughnut Coupon", CouponCode = "09876543210", Description = "SAVE $1.99", DiscountCents = 199.0 },
+                            new Coupon{ ClientSpotID = clientSpots[0].ClientSpotID, NotificationID = notifications[3].NotificationID, Name = "Croissant Coupon", CouponCode = "92186293264", Description = "SAVE $0.49", DiscountCents = 49.0 },
+                            new Coupon{ ClientSpotID = clientSpots[0].ClientSpotID, NotificationID = notifications[4].NotificationID, Name = "Coke Coupon", CouponCode = "97294957293", Description = "SAVE $0.20", DiscountCents = 20.0 }
                         };
                         foreach (Coupon coupon in coupons)
                         {
                             configurationData.Coupons.Add(coupon);
                         }
-                        Context.Logger.LogLine("3 Coupons added");
+                        Context.Logger.LogLine("4 Coupons added");
 
                         // Adding Users
                         var users = new User[]
@@ -256,7 +299,7 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding ClientUsers
                         var clientUsers = new ClientUser[]
                         {
-                            new ClientUser{ ClientID = 1, UserID = 1, VisitedAt = DateTime.UtcNow }
+                            new ClientUser{ ClientID = 1, UserID = 1 }
                         };
                         foreach (ClientUser clientUser in clientUsers)
                         {
@@ -267,7 +310,7 @@ namespace HWC_SeedDemoContentIntoDB
                         // Adding UserCoupons
                         var userCoupons = new UserCoupon[]
                         {
-                            new UserCoupon{ UserID = 1, CouponID = 1, ReceivedAt = DateTime.UtcNow, CouponRedempted = false }
+                            new UserCoupon{ UserID = 1, CouponID = 1 }
                         };
                         foreach (UserCoupon userCoupon in userCoupons)
                         {
@@ -303,23 +346,21 @@ namespace HWC_SeedDemoContentIntoDB
 
 
                         ///////// DB seeding with demo content /////////
+                        
+                        var dCL = await transientData.ObtainDisplayConcurrentListAsync();
+                        var zCL = await transientData.ObtainZoneConcurrentListAsync();
 
-                        List<DisplayConcurrentList> dClItems = null;
-                        List<ZoneConcurrentList> zClItems = null;
-
-                        // Look for any item in DisplayConcurrentList and ZoneConcurrentList Table
+                        // Look for any item (DisplaySession & ZoneSession) in DisplayConcurrentList and ZoneConcurrentList Table
                         try
                         {
-                            dClItems = await transientData.ScanAsync<DisplayConcurrentList>(null).GetNextSetAsync();
-                            zClItems = await transientData.ScanAsync<ZoneConcurrentList>(null).GetNextSetAsync();
-                            if (dClItems.Any() && zClItems.Any())
+                            if ((dCL?.DisplaySessions?.Any() ?? false) && (zCL?.ZoneSessions?.Any() ?? false))
                             {
-                                string log1 = JsonConvert.SerializeObject(dClItems);
-                                string log2 = JsonConvert.SerializeObject(zClItems);
+                                string log1 = JsonConvert.SerializeObject(dCL);
+                                string log2 = JsonConvert.SerializeObject(zCL);
                                 Context.Logger.LogLine("[TransientData Summary]");
-                                Context.Logger.LogLine($"Found {dClItems.Count} items in DisplayConcurrentList Table");
+                                Context.Logger.LogLine($"Found {dCL.DisplaySessions.Count} DisplaySession(s) in DisplayConcurrentList");
                                 Context.Logger.LogLine(log1);
-                                Context.Logger.LogLine($"Found {zClItems.Count} items in ZoneConcurrentList Table");
+                                Context.Logger.LogLine($"Found {zCL.ZoneSessions.Count} ZoneSession(s) in ZoneConcurrentList");
                                 Context.Logger.LogLine(log2);
                                 return;  // DB has been seeded already
                             }
@@ -334,62 +375,40 @@ namespace HWC_SeedDemoContentIntoDB
 
                         try
                         {
-                            if (!dClItems.Any())
+                            if ((!dCL?.DisplaySessions?.Any()) ?? false)
                             {
-                                DisplayConcurrentList dClItem = new DisplayConcurrentList()
+                                dCL.DisplaySessions.Add(new DisplaySession(1)
                                 {
-                                    ID = Guid.NewGuid(),
-                                    DisplaySessions = new List<DisplaySession>()
-                                    {
-                                        new DisplaySession()
-                                        {
-                                            DisplayEndpointID = 1,
-                                            IsUserExists = true,
-                                            BufferedShowNotificationID = 1,
-                                            CurrentShowNotificationExpireAt = DateTime.UtcNow.AddSeconds(10),
-                                            DisplayTouchedNotificationID = 1,
-                                            DisplayTouchedAt = DateTime.UtcNow.AddSeconds(5)
-                                        }
-                                    },
-                                    LastFlushedAt = DateTime.UtcNow
-                                };
+                                    IsUserExists = true,
+                                    BufferedShowNotificationID = 1,
+                                    CurrentShowNotificationExpireAt = DateTime.UtcNow.AddSeconds(10),
+                                    DisplayTouchedNotificationID = 1,
+                                    DisplayTouchedAt = DateTime.UtcNow.AddSeconds(5),
+                                    LocationDeviceID = 1,
+                                    LocationDeviceRegisteredAt = DateTime.UtcNow
+                                });
+                                dCL.LastFlushedAt = DateTime.UtcNow;
 
-                                // SAVING the item into physical DisplayConcurrentList DB Table
-                                Context.Logger.LogLine("Saving an item to DisplayConcurrentList Table");
-                                await transientData.SaveAsync<DisplayConcurrentList>(dClItem);
+                                // SAVING the DisplaySession into physical DisplayConcurrentList DB Table
+                                Context.Logger.LogLine("Saving a DisplaySession to DisplayConcurrentList Table");
+                                await transientData.SaveDisplayConcurrentListAsync();
                             }
 
-                            if (!zClItems.Any())
+                            if (!zCL.ZoneSessions.Any())
                             {
-                                ZoneConcurrentList zClItem = new ZoneConcurrentList()
+                                var zoneSession = new ZoneSession(1);
+                                zoneSession.UserConcurrentList.UserSessions.Add(new UserSession(1)
                                 {
-                                    ID = Guid.NewGuid(),
-                                    ZoneSessions = new List<ZoneSession>()
-                                    {
-                                        new ZoneSession()
-                                        {
-                                            ZoneID = 1,
-                                            UserConcurrentList = new UserConcurrentList()
-                                            {
-                                                LastFlushedAt = DateTime.UtcNow,
-                                                UserSessions = new List<UserSession>()
-                                                {
-                                                    new UserSession()
-                                                    {
-                                                        UserID = 1,
-                                                        EnteredIntoZoneAt = DateTime.UtcNow,
-                                                        LastSeenInZoneAt = DateTime.UtcNow,
-                                                        ReceivedCouponIDs = new List<long>() { }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                };
+                                    EnteredIntoZoneAt = DateTime.UtcNow,
+                                    LastSeenInZoneAt = DateTime.UtcNow,
+                                    ReceivedCouponIDs = new List<long> { 1 }
+                                });
+                                zoneSession.UserConcurrentList.LastFlushedAt = DateTime.UtcNow;
+                                zCL.ZoneSessions.Add(zoneSession);
 
-                                // SAVING the item into physical ZoneConcurrentList DB Table
-                                Context.Logger.LogLine("Saving an item to ZoneConcurrentList Table");
-                                await transientData.SaveAsync<ZoneConcurrentList>(zClItem);
+                                // SAVING the ZoneSession into physical ZoneConcurrentList DB Table
+                                Context.Logger.LogLine("Saving a ZoneSession with an UserSession to ZoneConcurrentList Table");
+                                await transientData.SaveZoneConcurrentListAsync();
                             }
                         }
                         catch (Exception ex)
