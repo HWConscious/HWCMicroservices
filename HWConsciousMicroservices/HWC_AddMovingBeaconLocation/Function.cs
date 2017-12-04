@@ -31,7 +31,7 @@ namespace HWC_AddMovingBeaconLocation
         #endregion
 
         /// <summary>
-        /// Adds an User Location and returns Coupons for the User (if any)
+        /// Adds a moving beacon Location and returns Notification for the LocationDevice (if any)
         /// </summary>
         /// <param name="request"></param>
         /// <param name="context"></param>
